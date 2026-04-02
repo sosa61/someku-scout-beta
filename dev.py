@@ -231,97 +231,119 @@ with tabs[0]:
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
 
-# --- 2. RULET (V900 - ULTIMATE EVOLUTION) ---
+# --- 2. RULET (V1000 - ZIPPER PACK & 3D ULTIMATE) ---
 with tabs[1]:
     import random, json, time, urllib.parse
 
-    # 💎 CSS: OYUN MOTORU GÖRÜNÜMÜ VE 3D KART FİZİĞİ
+    # 💎 CSS: FERMUAR ANİMASYONU VE 3D OYUN MOTORU GÖRÜNÜMÜ
     st.markdown("""
         <style>
-        @keyframes pack-explode { 0% { transform: scale(0); opacity: 0; filter: brightness(5); } 100% { transform: scale(1); opacity: 1; filter: brightness(1); } }
-        @keyframes pa-glow { 0% { box-shadow: 0 0 10px #f2cc60; } 50% { box-shadow: 0 0 30px #f2cc60; } 100% { box-shadow: 0 0 10px #f2cc60; } }
+        @keyframes zipper-left { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        @keyframes zipper-right { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+        @keyframes card-entry { 0% { transform: scale(0) rotateZ(-20deg); opacity:0; } 70% { transform: scale(1.1) rotateZ(5deg); opacity:1; } 100% { transform: scale(1) rotateZ(0); } }
+        @keyframes glow-pulse { 0% { box-shadow: 0 0 20px rgba(242,204,96,0.4); } 50% { box-shadow: 0 0 50px rgba(242,204,96,0.8); } 100% { box-shadow: 0 0 20px rgba(242,204,96,0.4); } }
+
+        /* Fermuar Katmanları */
+        .zip-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none; display: flex; }
+        .zip-half { width: 50%; height: 100%; background: #000; position: relative; display: flex; align-items: center; }
+        .zip-left { justify-content: flex-end; border-right: 2px solid #f2cc60; animation: zipper-left 1s forwards; animation-delay: 0.5s; }
+        .zip-right { justify-content: flex-start; border-left: 2px solid #f2cc60; animation: zipper-right 1s forwards; animation-delay: 0.5s; }
         
-        .main-container { perspective: 1500px; text-align: center; padding: 20px; background: radial-gradient(circle, #1a1f2c 0%, #080a0f 100%); border-radius: 30px; }
+        /* Kart Sahnesi */
+        .stage { perspective: 1200px; text-align: center; padding: 40px 0; background: radial-gradient(circle, #1a1f2c 0%, #080a0f 100%); border-radius: 30px; margin-top: 20px; }
         
-        .wonder-card {
-            width: 320px; min-height: 500px; background: #0d1117; border: 3px solid #f2cc60;
-            border-radius: 20px; display: inline-block; position: relative;
-            transform-style: preserve-3d; transition: all 0.1s ease;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: pack-explode 0.6s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-            overflow: hidden; padding-bottom: 20px;
+        .wonder-card-3d {
+            width: 320px; min-height: 520px; background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            border: 3px solid #f2cc60; border-radius: 20px; display: inline-block; position: relative;
+            transform-style: preserve-3d; animation: card-entry 1s ease-out; animation-delay: 0.8s;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9); padding: 25px; animation: glow-pulse 3s infinite;
         }
 
-        .card-inner-glow { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(242,204,96,0.1) 0%, transparent 100%); pointer-events: none; }
-        
-        .pa-orb {
-            width: 100px; height: 100px; border-radius: 50%; background: #f2cc60; color: #000;
-            margin: 30px auto 10px; display: flex; align-items: center; justify-content: center;
-            font-size: 40px; font-weight: 900; animation: pa-glow 2s infinite; border: 5px solid #fff;
+        .pa-orb-3d {
+            width: 110px; height: 110px; border-radius: 50%; background: #f2cc60; color: #000;
+            margin: 10px auto; display: flex; align-items: center; justify-content: center;
+            font-size: 45px; font-weight: 900; border: 6px solid rgba(255,255,255,0.9);
+            box-shadow: 0 0 20px #f2cc60;
         }
 
-        .stars-row { color: #f2cc60; font-size: 24px; margin-bottom: 10px; text-shadow: 0 0 10px #f2cc60; }
+        .player-title { font-size: 30px; font-weight: 900; color: #fff; text-transform: uppercase; margin: 15px 0 5px; letter-spacing: 2px; }
+        .stars-gold { color: #f2cc60; font-size: 26px; margin-bottom: 10px; }
         
-        .player-name { font-size: 28px; font-weight: 900; color: #fff; text-transform: uppercase; margin: 10px 0; letter-spacing: 1px; }
-        
-        .stat-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px;
-            margin-top: 20px; text-align: left;
+        .stat-grid-ultimate {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 25px; padding: 0 10px;
         }
-        .stat-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border-left: 3px solid #f2cc60; }
-        .stat-label { font-size: 10px; color: #8b949e; text-transform: uppercase; }
-        .stat-value { font-size: 14px; color: #fff; font-weight: bold; }
-        
-        .price-tag { font-size: 22px; color: #00ff41; font-weight: 900; margin: 15px 0; }
-        
-        .transfer-btn {
-            background: #58a6ff; color: #fff; text-decoration: none; padding: 12px 25px;
-            border-radius: 12px; font-weight: bold; display: inline-block; transition: 0.3s;
+        .stat-ultimate-box { 
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(242,204,96,0.2); 
+            padding: 12px; border-radius: 12px; text-align: left;
         }
-        .transfer-btn:hover { background: #1f6feb; transform: scale(1.05); }
+        .stat-label-u { font-size: 11px; color: #8b949e; text-transform: uppercase; font-weight: bold; }
+        .stat-value-u { font-size: 15px; color: #fff; font-weight: bold; display: block; margin-top: 3px; }
+        
+        .price-banner { 
+            background: linear-gradient(90deg, transparent, rgba(0,255,65,0.15), transparent);
+            color: #00ff41; font-size: 24px; font-weight: 900; margin: 20px 0; padding: 10px 0;
+        }
+        
+        .report-btn {
+            background: #f2cc60; color: #000; text-decoration: none; padding: 14px 30px;
+            border-radius: 50px; font-weight: 900; display: inline-block; transition: 0.4s;
+            box-shadow: 0 10px 20px rgba(242,204,96,0.3);
+        }
+        .report-btn:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(242,204,96,0.5); background: #fff; }
         </style>
     """, unsafe_allow_html=True)
 
-    # --- 🎲 HAVUZU HAZIRLA (SMART FILTER) ---
+    st.markdown('<h2 style="text-align:center; color:#f2cc60; letter-spacing:3px;">🎰 ELITE PACK OPENING</h2>', unsafe_allow_html=True)
+    
+    import random, json, time, urllib.parse
+
     curr_user = st.session_state.get('user')
+
+    # --- 🎲 SMART PLAYER POOL (MAX 21 AGE | 130-200 PA | MAX 20M PRICE) ---
     try:
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
-        def clean_filter(p):
+        
+        def filter_engine(p):
             try:
-                # Sayı dışındaki her şeyi sil, 20M € sınırını kontrol et
-                num = "".join(filter(str.isdigit, str(p.get('deger', '0'))))
-                val = float(num)
-                if val > 1000: val = val / 1000000 # Eğer 15.000.000 ise 15 yapar
+                # Fiyat temizliği: "11.000.000" veya "3M €" -> sayısal değer
+                raw_val = str(p.get('deger', '0')).lower()
+                clean_val = "".join(filter(str.isdigit, raw_val))
+                if not clean_val: return True
+                val = float(clean_val)
+                # Milyon kontrolü
+                if val > 1000: val = val / 1000000
                 return val <= 20
             except: return True
-        player_pool = [p for p in res.data if clean_filter(p)]
+
+        player_pool = [p for p in res.data if filter_engine(p)]
     except: player_pool = []
 
-    # --- 🎰 PACK OPENING BUTTON ---
+    # --- 🎰 TRIGGER BUTTON ---
     if player_pool:
-        if st.button("🧧 ELITE PACK AÇ (ULTIMATE)", key="ultimate_spin_v9", use_container_width=True):
+        if st.button("🧧 PAKETİ FERMUARLA AÇ", key="zipper_pack_btn", use_container_width=True):
             st.session_state.rulet_winner = random.choice(player_pool)
             st.session_state.animasyon_tamam = False
             
-            # Patlama Animasyonu
-            p_text = st.empty()
-            for i in range(3):
-                p_text.markdown(f"<h1 style='text-align:center; color:#f2cc60; animation: blinker 0.2s linear infinite;'>💥 WALKOUT {'.'*(i+1)}</h1>", unsafe_allow_html=True)
-                time.sleep(0.5)
-            p_text.empty()
+            # Fermuar Animasyon Efekti
+            st.markdown("""
+                <div class="zip-container">
+                    <div class="zip-half zip-left">⚡</div>
+                    <div class="zip-half zip-right">⚡</div>
+                </div>
+            """, unsafe_allow_html=True)
             
+            time.sleep(1.8) # Animasyonun tamamlanmasını bekle
             st.session_state.animasyon_tamam = True
             st.rerun()
     else:
-        st.error("Kriterlere uygun mermi bulunamadı patron.")
+        st.error("Kriterlere uygun mermi bulunamadı patron!")
 
-    # --- 🏆 ULTIMATE 3D CARD DISPLAY ---
+    # --- 🏆 ULTIMATE DISPLAY ENGINE ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         pa = int(p.get('pa', 0))
-        # Dinamik Yıldızlar
         stars = "★" * (5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2)))
         
-        # Bilgiler
         p_name = p.get('oyuncu_adi', 'Bilinmiyor').upper()
         p_price = p.get('deger', '0')
         p_age = p.get('yas', '-')
@@ -332,35 +354,46 @@ with tabs[1]:
         tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p_name)}"
 
         st.markdown(f"""
-        <div class="main-container">
-            <div class="wonder-card">
-                <div class="card-inner-glow"></div>
-                <div class="pa-orb">{pa}</div>
-                <div class="stars-row">{stars}</div>
-                <div class="player-name">{p_name}</div>
-                <div class="price-tag">💰 {p_price}</div>
+        <div class="stage">
+            <div class="wonder-card-3d">
+                <div class="stars-gold">{stars}</div>
+                <div class="pa-orb-3d">{pa}</div>
+                <div class="player-title">{p_name}</div>
+                <div class="price-banner">💰 {p_price}</div>
                 
-                <div class="stat-grid">
-                    <div class="stat-box"><div class="stat-label">Kulüp</div><div class="stat-value">{p_club}</div></div>
-                    <div class="stat-box"><div class="stat-label">Ülke</div><div class="stat-value">{p_nat}</div></div>
-                    <div class="stat-box"><div class="stat-label">Mevki</div><div class="stat-value">{p_pos}</div></div>
-                    <div class="stat-box"><div class="stat-label">Yaş</div><div class="stat-value">{p_age}</div></div>
+                <div class="stat-grid-ultimate">
+                    <div class="stat-ultimate-box">
+                        <span class="stat-label-u">Kulüp</span>
+                        <span class="stat-value-u">{p_club}</span>
+                    </div>
+                    <div class="stat-ultimate-box">
+                        <span class="stat-label-u">Ülke</span>
+                        <span class="stat-value-u">{p_nat}</span>
+                    </div>
+                    <div class="stat-ultimate-box">
+                        <span class="stat-label-u">Mevki</span>
+                        <span class="stat-value-u">{p_pos}</span>
+                    </div>
+                    <div class="stat-ultimate-box">
+                        <span class="stat-label-u">Yaş</span>
+                        <span class="stat-value-u">{p_age}</span>
+                    </div>
                 </div>
                 
-                <div style="margin-top:25px;">
-                    <a href="{tm_link}" target="_blank" class="transfer-btn">ANALİZ RAPORUNU AÇ ➔</a>
+                <div style="margin-top:35px;">
+                    <a href="{tm_link}" target="_blank" class="report-btn">RAPORU GÖRÜNTÜLE ➔</a>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Favori Ekleme Butonu
-        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="final_fav_btn"):
+        # Favori Butonu
+        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="zipper_fav"):
             supabase.table("favoriler").insert({
                 "oyuncu_adi": p_name, "kulup": p_club, "pa": pa, "mevki": p_pos, "kullanici_adi": curr_user
             }).execute()
+            st.balloons()
             st.success("Mermi kulübe katıldı!")
-
 
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
