@@ -705,7 +705,7 @@ with tabs[7]:
             users_list = []
 
         st.markdown("---")
-        adm_tabs = st.tabs(["👥 Kullanıcı & VIP", "🔍 Oyuncu Denetimi", "🛠️ Sistem Bakımı"])
+     dm_tabs = st.tabs(["👥 Kullanıcı & VIP", "🔍 Oyuncu Denetimi", "🛠️ Sistem Bakımı", "📬 Gelen Öneriler"])
 
         # --- A. KULLANICI & VIP YÖNETİMİ ---
         with adm_tabs[0]:
