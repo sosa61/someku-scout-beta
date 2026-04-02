@@ -284,7 +284,7 @@ with tabs[1]:
     # --- MOTOR ---
     player_pool = []
     try:
-        res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
+        res = supabase.table("oyuncular").select("*").gte("pa", 140).lte("pa", 200).lte("yas", 21).execute()
         def price_check(p):
             try:
                 s = str(p.get('deger', '0')).lower().replace('€','').replace('m','').replace('£','').strip()
@@ -357,7 +357,6 @@ with tabs[1]:
         if st.button("⭐ FAVORİLERE EKLE", key="fav_btn_rulet_final", use_container_width=True):
             supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
             st.toast("Mermi listeye eklendi!")
-
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
