@@ -230,65 +230,62 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V1100 - BOX ZIPPER & FULL STATS) ---
+# --- 2. RULET (V1200 - PERFECT BOX ZIPPER & FULL STATS) ---
 with tabs[1]:
     import random, json, time, urllib.parse
 
-    # 💎 CSS: KUTU İÇİ FERMUAR VE EKSİKSİZ BİLGİ KARTLARI
+    # 💎 CSS: KUTU İÇİ FERMUAR VE EKSİKSİZ STAT KARTLARI
     st.markdown("""
         <style>
-        @keyframes zip-open-left { 0% { transform: skewX(0); left: 0; } 100% { transform: skewX(-20deg); left: -60%; opacity: 0; } }
-        @keyframes zip-open-right { 0% { transform: skewX(0); right: 0; } 100% { transform: skewX(20deg); right: -60%; opacity: 0; } }
-        @keyframes content-fade { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes zip-open-left { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
+        @keyframes zip-open-right { 0% { right: 0; } 100% { right: -100%; opacity: 0; } }
+        @keyframes fade-in-stats { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
 
         .pack-wrapper {
-            width: 340px; min-height: 550px; margin: 20px auto;
+            width: 340px; min-height: 580px; margin: 20px auto;
             position: relative; overflow: hidden; border-radius: 20px;
             background: #0d1117; border: 3px solid #f2cc60;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
 
-        /* Fermuar Katmanları (Sadece Kutu Üstünde) */
-        .zip-cover {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10; display: flex; transition: 1s;
-        }
-        .zip-side { width: 50%; height: 100%; background: #1a1f2c; position: relative; border: 1px solid #f2cc60; }
-        .zip-open-left { animation: zip-open-left 1.2s forwards; }
-        .zip-open-right { animation: zip-open-right 1.2s forwards; }
+        /* Fermuar Katmanları */
+        .zip-cover { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; }
+        .zip-side { width: 50%; height: 100%; background: linear-gradient(135deg, #1a1f2c, #0d1117); position: relative; border: 1px solid #f2cc60; }
         
-        .zip-puller {
+        .zip-active-left { animation: zip-open-left 1.2s forwards; }
+        .zip-active-right { animation: zip-open-right 1.2s forwards; }
+        
+        .zip-line {
             position: absolute; top: 0; left: 50%; transform: translateX(-50%);
             width: 4px; height: 100%; background: #f2cc60; z-index: 11;
             box-shadow: 0 0 15px #f2cc60;
         }
 
-        /* İçerik Kartı */
-        .card-inner {
-            padding: 25px; text-align: center; opacity: 0;
-            animation: content-fade 0.8s forwards; animation-delay: 0.5s;
-        }
-        .pa-circle-u {
-            width: 100px; height: 100px; border-radius: 50%; background: #f2cc60;
-            color: #000; margin: 0 auto 15px; display: flex; align-items: center;
-            justify-content: center; font-size: 42px; font-weight: 900;
-            border: 4px solid #fff; box-shadow: 0 0 20px rgba(242,204,96,0.6);
-        }
-        .u-title { color: #fff; font-size: 26px; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
-        .u-stars { color: #f2cc60; font-size: 20px; margin-bottom: 15px; }
+        /* İçerik Kartı Tasarımı */
+        .card-inner { padding: 25px; text-align: center; opacity: 0; animation: fade-in-stats 0.8s forwards; animation-delay: 0.6s; }
         
-        .u-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
-        .u-box { 
+        .pa-orb-u {
+            width: 90px; height: 90px; border-radius: 50%; background: #f2cc60;
+            color: #000; margin: 0 auto 10px; display: flex; align-items: center;
+            justify-content: center; font-size: 38px; font-weight: 900;
+            border: 4px solid #fff; box-shadow: 0 0 20px rgba(242,204,96,0.5);
+        }
+        
+        .u-name { color: #fff; font-size: 24px; font-weight: 900; margin: 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .u-stars { color: #f2cc60; font-size: 18px; margin-bottom: 15px; }
+        
+        .stat-grid-fix { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-box-fix { 
             background: rgba(255,255,255,0.05); border: 1px solid rgba(242,204,96,0.2); 
-            padding: 10px; border-radius: 10px; text-align: left;
+            padding: 10px; border-radius: 12px; text-align: left;
         }
-        .u-label { font-size: 10px; color: #8b949e; text-transform: uppercase; display: block; }
-        .u-val { font-size: 13px; color: #fff; font-weight: bold; }
+        .stat-lbl { font-size: 10px; color: #8b949e; text-transform: uppercase; font-weight: bold; display: block; }
+        .stat-val { font-size: 13px; color: #fff; font-weight: bold; display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        .u-price { font-size: 22px; color: #00ff41; font-weight: 900; margin: 15px 0; }
-        .u-btn {
-            background: #58a6ff; color: #fff; text-decoration: none; padding: 12px 20px;
-            border-radius: 10px; font-weight: bold; display: inline-block; width: 100%;
+        .u-price-fix { font-size: 20px; color: #00ff41; font-weight: 900; margin: 15px 0; }
+        .u-tm-btn {
+            background: #58a6ff; color: #fff; text-decoration: none; padding: 12px;
+            border-radius: 10px; font-weight: bold; display: block; text-align: center;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -297,92 +294,110 @@ with tabs[1]:
     
     curr_user = st.session_state.get('user')
 
-    # --- 🎲 HAVUZU HAZIRLA (SMART FILTER) ---
+    # --- 🎲 SMART PLAYER POOL (MAX 21 AGE | 130-200 PA | MAX 20M PRICE) ---
     try:
+        # Tüm havuzu çekelim
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
+        
         def price_check(p):
             try:
-                raw = "".join(filter(str.isdigit, str(p.get('deger', '0'))))
-                val = float(raw)
+                # Fiyat temizleme: Sadece rakamları al
+                raw_v = str(p.get('deger', '0'))
+                clean_v = "".join(filter(str.isdigit, raw_v))
+                if not clean_v: return True
+                val = float(clean_v)
                 if val > 1000: val = val / 1000000
                 return val <= 20
             except: return True
+
         player_pool = [p for p in res.data if price_check(p)]
     except: player_pool = []
 
     # --- 🎰 TRIGGER BUTTON ---
     if player_pool:
-        if st.button("🔥 KUTUYU FERMUARLA AÇ", key="box_zip_trigger", use_container_width=True):
+        if st.button("🔥 PAKETİ FERMUARLA AÇ", key="box_zip_v1200", use_container_width=True):
             st.session_state.rulet_winner = random.choice(player_pool)
             st.session_state.animasyon_tamam = False
             
-            # Kutu Görüntüsü (Açılmadan önce)
+            # Fermuar Başlangıç Görünümü
             st.markdown("""
                 <div class="pack-wrapper">
                     <div class="zip-cover">
-                        <div class="zip-side" style="left:0; border-right:none;"></div>
-                        <div class="zip-puller"></div>
-                        <div class="zip-side" style="right:0; border-left:none;"></div>
+                        <div class="zip-side"></div>
+                        <div class="zip-line"></div>
+                        <div class="zip-side"></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
             
-            time.sleep(0.1) # CSS tetiklenmesi için kısa bekleme
+            time.sleep(0.1) 
             st.session_state.animasyon_tamam = True
             st.rerun()
     else:
-        st.error("Kriterlere uygun mermi bulunamadı patron!")
+        st.error("Havuzda mermi kalmadı patron!")
 
-    # --- 🏆 DISPLAY ENGINE ---
+    # --- 🏆 DISPLAY ENGINE (HATASIZ BİLGİLER) ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
-        pa = int(p.get('pa', 0))
-        stars = "★" * (5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2)))
         
-        # Değişkenleri Temiz Çekelim
+        # Değişkenleri Hata Vermeyecek Şekilde Hazırlayalım
         p_name = str(p.get('oyuncu_adi', 'Bilinmiyor')).upper()
-        p_price = str(p.get('deger', '-'))
-        p_age = str(p.get('yas', '-'))
-        p_club = str(p.get('kulup', '-'))
+        p_pa = int(p.get('pa', 0))
+        p_club = str(p.get('kulup', 'Serbest'))
         p_nat = str(p.get('ulke', '-'))
         p_pos = str(p.get('mevki', '-'))
+        p_age = str(p.get('yas', '-'))
+        p_price = str(p.get('deger', '-'))
         
+        stars = "★" * (5 if p_pa >= 180 else (4 if p_pa >= 165 else (3 if p_pa >= 150 else 2)))
         tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p_name)}"
 
-        # Kutu Açık Hali
+        # Kutu ve İçerik
         st.markdown(f"""
         <div class="pack-wrapper">
             <div class="zip-cover">
-                <div class="zip-side zip-open-left" style="border-right:none;"></div>
-                <div class="zip-side zip-open-right" style="border-left:none;"></div>
+                <div class="zip-side zip-active-left"></div>
+                <div class="zip-side zip-active-right"></div>
             </div>
+            
             <div class="card-inner">
-                <div class="pa-circle-u">{pa}</div>
+                <div class="pa-orb-u">{p_pa}</div>
                 <div class="u-stars">{stars}</div>
-                <div class="u-title">{p_name}</div>
-                <div class="u-price">💰 {p_price}</div>
+                <div class="u-name">{p_name}</div>
+                <div class="u-price-fix">💰 {p_price}</div>
                 
-                <div class="u-grid">
-                    <div class="u-box"><span class="u-label">Kulüp</span><span class="u-val">{p_club}</span></div>
-                    <div class="u-box"><span class="u-label">Ülke</span><span class="u-val">{p_nat}</span></div>
-                    <div class="u-box"><span class="u-label">Mevki</span><span class="u-val">{p_pos}</span></div>
-                    <div class="u-box"><span class="u-label">Yaş</span><span class="u-val">{p_age}</span></div>
+                <div class="stat-grid-fix">
+                    <div class="stat-box-fix">
+                        <span class="stat-lbl">Kulüp</span>
+                        <span class="stat-val">{p_club}</span>
+                    </div>
+                    <div class="stat-box-fix">
+                        <span class="stat-lbl">Ülke</span>
+                        <span class="stat-val">{p_nat}</span>
+                    </div>
+                    <div class="stat-box-fix">
+                        <span class="stat-lbl">Mevki</span>
+                        <span class="stat-val">{p_pos}</span>
+                    </div>
+                    <div class="stat-box-fix">
+                        <span class="stat-lbl">Yaş</span>
+                        <span class="stat-val">{p_age}</span>
+                    </div>
                 </div>
                 
-                <div style="margin-top:25px;">
-                    <a href="{tm_link}" target="_blank" class="u-btn">TRANSFERMARKT ➔</a>
+                <div style="margin-top:20px;">
+                    <a href="{tm_link}" target="_blank" class="u-tm-btn">TRANSFERMARKT PROFİLİ ➔</a>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Favori Butonu (Kutu Dışında)
-        if st.button("⭐ FAVORİLERE EKLE", key="box_fav_last"):
+        # Favori Butonu (Kutu Altında)
+        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="fav_zip_fix"):
             supabase.table("favoriler").insert({
-                "oyuncu_adi": p_name, "kulup": p_club, "pa": pa, "mevki": p_pos, "kullanici_adi": curr_user
+                "oyuncu_adi": p_name, "kulup": p_club, "pa": p_pa, "mevki": p_pos, "kullanici_adi": curr_user
             }).execute()
-            st.toast("Mermi kulübe katıldı!")
-            st.rerun()
+            st.toast(f"{p_name} mermisi listeye eklendi!")
 
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
