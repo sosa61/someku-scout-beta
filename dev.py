@@ -229,68 +229,69 @@ with tabs[0]:
         if c1.button("⬅️ Geri", use_container_width=True) and st.session_state.page > 0: st.session_state.page -= 1; st.rerun()
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
-
-# --- 2. RULET (V1700 - NEON BLUE-GREEN & TURKISH POSITIONS) ---
+# --- 2. RULET (V1800 - NEON ENGINE & TM FIX) ---
 with tabs[1]:
     import random, time, urllib.parse
 
-    # 1. ZIRHLI CSS (Mavi ve Yeşil Neon Işıklar)
+    # 1. ZIRHLI CSS (Mavi ve Yeşil Neon Tasarım)
     st.markdown("""
         <style>
         @keyframes packL { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
         @keyframes packR { 0% { right: 0; } 100% { right: -100%; opacity: 0; } }
-        @keyframes packShow { 0% { opacity: 0; transform: scale(0.3) rotate(10deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
-        @keyframes neonPulse { 0% { box-shadow: 0 0 15px #00d4ff; } 50% { box-shadow: 0 0 40px #00ff87, 0 0 60px #00d4ff; } 100% { box-shadow: 0 0 15px #00ff87; } }
+        @keyframes packShow { 0% { opacity: 0; transform: scale(0.5) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes neonBorder { 0% { border-color: #00d4ff; box-shadow: 0 0 10px #00d4ff; } 50% { border-color: #00ff87; box-shadow: 0 0 30px #00ff87; } 100% { border-color: #00d4ff; box-shadow: 0 0 10px #00d4ff; } }
         
         .pack-frame {
             width: 350px; min-height: 620px; margin: 20px auto;
             position: relative; overflow: hidden; border-radius: 30px;
-            background: linear-gradient(135deg, #050a14 0%, #0d1117 100%);
-            border: 3px solid #00ff87; /* Yeşil Sınır */
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9); animation: neonPulse 4s infinite ease-in-out;
+            background: #080a0f; border: 4px solid #00d4ff;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9); animation: neonBorder 4s infinite ease-in-out;
         }
-        .pack-gate { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; }
+        .pack-gate { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; display: flex; pointer-events: none; }
         .pack-side { 
             width: 50%; height: 100%; 
-            background: linear-gradient(180deg, #00d4ff, #004e92); /* Mavi Kapak */
+            background: linear-gradient(135deg, #00d4ff, #001a33); 
             border: 1px solid #00ff87; 
         }
-        .open-l { animation: packL 1.2s forwards; }
-        .open-r { animation: packR 1.2s forwards; }
+        .open-l { animation: packL 1.2s forwards 0.2s; }
+        .open-r { animation: packR 1.2s forwards 0.2s; }
         
-        .pack-content { padding: 35px 20px; text-align: center; opacity: 0; animation: packShow 0.8s forwards 0.6s; }
+        .pack-content { padding: 40px 20px; text-align: center; opacity: 0; animation: packShow 0.8s forwards 0.8s; }
         .pa-sphere {
             width: 100px; height: 100px; border-radius: 50%; 
-            background: linear-gradient(135deg, #00ff87, #00d4ff); /* Mavi-Yeşil PA */
+            background: linear-gradient(135deg, #00ff87, #00d4ff);
             color: #000; margin: 0 auto 15px; display: flex; align-items: center;
             justify-content: center; font-size: 42px; font-weight: 900;
             border: 5px solid #fff; box-shadow: 0 0 30px rgba(0,255,135,0.7);
         }
-        .p-name { color: #fff; font-size: 26px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 0 10px #00d4ff; }
-        .p-price { font-size: 24px; color: #00ff87; font-weight: 900; margin-bottom: 20px; display: block; }
+        .p-name { color: #fff; font-size: 26px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 0 15px #00d4ff; }
+        .p-price { font-size: 24px; color: #00ff87; font-weight: 900; margin-bottom: 20px; display: block; text-shadow: 0 0 5px #000; }
         
         .stat-grid-ultimate { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .stat-box-ultimate { 
-            background: rgba(0, 212, 255, 0.05); padding: 12px 8px; border-radius: 15px; 
-            text-align: center; border: 1px solid rgba(0, 255, 135, 0.2); 
+            background: rgba(0, 212, 255, 0.08); padding: 12px 8px; border-radius: 15px; 
+            text-align: center; border: 1px solid rgba(0, 255, 135, 0.3); 
         }
         .stat-l { font-size: 10px; color: #00d4ff; text-transform: uppercase; font-weight: 800; display: block; }
         .stat-v { font-size: 14px; color: #fff; font-weight: bold; display: block; margin-top: 3px; }
         
-        .p-btn {
-            background: linear-gradient(90deg, #00d4ff, #00ff87); color: #000; text-decoration: none; padding: 15px;
-            border-radius: 15px; font-weight: 900; display: block; margin-top: 25px; transition: 0.3s;
+        /* TRANSFERMARKT BUTONU - ZIRHLI */
+        .p-btn-tm {
+            background: linear-gradient(90deg, #00d4ff, #00ff87); color: #000 !important; 
+            text-decoration: none !important; padding: 15px; border-radius: 15px; 
+            font-weight: 900; display: block; margin-top: 25px; transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(0,255,135,0.4); text-align:center;
         }
-        .p-btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+        .p-btn-tm:hover { transform: scale(1.05); filter: brightness(1.2); }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<h2 style="text-align:center; color:#00ff87; letter-spacing:3px; text-shadow: 0 0 15px #00ff87;">🔵 ELITE NEON PACK 🟢</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="text-align:center; color:#00ff87; letter-spacing:3px;">🔵 ELITE NEON PACK 🟢</h2>', unsafe_allow_html=True)
 
     curr_user = st.session_state.get('user')
 
     # --- ⚽ TÜRKÇE MEVKİ SİSTEMİ ---
-    mevki_sozluk = {
+    mevki_tr = {
         "GK": "Kaleci", "DC": "Stoper", "DL": "Sol Bek", "DR": "Sağ Bek", 
         "WBL": "Sol Kanat Bek", "WBR": "Sağ Kanat Bek", "DM": "Ön Libero",
         "MC": "Orta Saha", "ML": "Sol Kanat", "MR": "Sağ Kanat",
@@ -301,22 +302,22 @@ with tabs[1]:
     # 🎲 HAVUZ (Maks 21 Yaş, 130-200 PA, Maks 20M €)
     try:
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
-        def filter_mermi(p):
+        def filter_engine(p):
             try:
                 raw = "".join(filter(str.isdigit, str(p.get('deger', '0'))))
                 v = float(raw)
                 if v > 1000: v /= 1000000
                 return v <= 20
             except: return True
-        pool = [p for p in res.data if filter_mermi(p)]
+        pool = [p for p in res.data if filter_engine(p)]
     except: pool = []
 
     # 🎰 TETİKLEYİCİ
     if pool:
-        if st.button("🚀 NEON PAKETİ PATLAT", key="neon_v17_btn", use_container_width=True):
+        if st.button("🚀 NEON PAKETİ PATLAT", key="v18_trigger", use_container_width=True):
             st.session_state.rulet_winner = random.choice(pool)
             st.session_state.animasyon_tamam = False
-            # Kapalı Paket Görüntüsü
+            # Kapalı Paket Görüntüsü (Giriş Efekti İçin)
             st.markdown('<div class="pack-frame"><div class="pack-gate"><div class="pack-side"></div><div class="pack-side"></div></div></div>', unsafe_allow_html=True)
             time.sleep(0.1)
             st.session_state.animasyon_tamam = True
@@ -324,7 +325,7 @@ with tabs[1]:
     else:
         st.error("Kriterlere uygun mermi bulunamadı patron!")
 
-    # 🏆 GÖSTERİM (GERÇEK VERİLER)
+    # 🏆 GÖSTERİM (GARANTİ VERİ & ÇALIŞAN LİNK)
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         
@@ -336,48 +337,43 @@ with tabs[1]:
         age = str(p.get('yas', '-'))
         val = str(p.get('deger', '-'))
         
-        # Mevki Türkçeleştirme
-        pos_tr = mevki_sozluk.get(raw_pos, raw_pos)
+        pos_tr = mevki_tr.get(raw_pos, raw_pos)
+        stars = "⭐" * (5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2)))
         
-        # Yıldızlar (PA'ya Göre)
-        star_count = 5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2))
-        stars = "⭐" * star_count
-        
-        tm_link = f"https://www.google.com/search?q={urllib.parse.quote(name + ' transfermarkt')}&btnI"
+        # TRANSFERMARKT LINK FIX: Direkt arama sayfasına yönlendiriyoruz (En güvenli yol)
+        tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(name)}"
 
         # HTML Şablonu
-        html_template = """
+        html_code = f"""
         <div class="pack-frame">
             <div class="pack-gate">
                 <div class="pack-side open-l"></div>
                 <div class="pack-side open-r"></div>
             </div>
             <div class="pack-content">
-                <div class="pa-sphere">[[PA]]</div>
-                <div style="font-size:22px; margin-bottom:10px;">[[STARS]]</div>
-                <div class="p-name">[[NAME]]</div>
-                <div class="p-price">[[VAL]]</div>
+                <div class="pa-sphere">{pa}</div>
+                <div style="font-size:22px; margin-bottom:10px;">{stars}</div>
+                <div class="p-name">{name}</div>
+                <div class="p-price">💰 {val}</div>
                 <div class="stat-grid-ultimate">
-                    <div class="stat-box-ultimate"><span class="stat-l">Kulüp</span><span class="stat-v">[[CLUB]]</span></div>
-                    <div class="stat-box-ultimate"><span class="stat-l">Ülke</span><span class="stat-v">[[NAT]]</span></div>
-                    <div class="stat-box-ultimate"><span class="stat-l">Mevki</span><span class="stat-v">[[POS]]</span></div>
-                    <div class="stat-box-ultimate"><span class="stat-l">Yaş</span><span class="stat-v">[[AGE]]</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Kulüp</span><span class="stat-v">{club}</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Ülke</span><span class="stat-v">{nat}</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Mevki</span><span class="stat-v">{pos_tr}</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Yaş</span><span class="stat-v">{age}</span></div>
                 </div>
-                <a href="[[TM]]" target="_blank" class="p-btn">TRANSFERMARKT PROFİLİ</a>
+                <a href="{tm_link}" target="_blank" class="p-btn-tm">TRANSFERMARKT PROFİLİ</a>
             </div>
         </div>
         """
+        st.markdown(html_code, unsafe_allow_html=True)
         
-        # Güvenli Değiştirme
-        final_html = html_template.replace("[[NAME]]", name).replace("[[PA]]", str(pa)).replace("[[CLUB]]", club).replace("[[NAT]]", nat).replace("[[POS]]", pos_tr).replace("[[AGE]]", str(age)).replace("[[VAL]]", val).replace("[[STARS]]", stars).replace("[[TM]]", tm_link)
-        
-        st.markdown(final_html, unsafe_allow_html=True)
-        
-        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v17_fav"):
+        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v18_fav"):
             supabase.table("favoriler").insert({
                 "oyuncu_adi": name, "kulup": club, "pa": pa, "mevki": raw_pos, "kullanici_adi": curr_user
             }).execute()
             st.success("Mermi kulübe katıldı!")
+
+            
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
     st.markdown('<h2 style="text-align:center;">🏟️ ELITE ARENA - TAKTİK TAHTASI</h2>', unsafe_allow_html=True)
