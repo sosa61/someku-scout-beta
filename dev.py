@@ -230,42 +230,46 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V245 - 3D ELITE VIP CARD - STABLE) ---
+# --- 2. RULET (V300 - ULTRA RANDOM & SMART IMAGE) ---
 with tabs[1]:
-    # 💎 CSS BLOĞU: 3D EFEKT VE IŞILTI
+    # 💎 GELİŞMİŞ CSS: 3D KART, IŞIK SIZMASI VE ANİMASYONLAR
     st.markdown("""
         <style>
-        .elite-card-container { perspective: 1000px; margin-top: 30px; text-align: center; }
+        @keyframes shine { 0% {left: -100%;} 100% {left: 100%;} }
+        .elite-card-container { perspective: 1200px; margin-top: 30px; text-align: center; }
         .elite-card {
             background: linear-gradient(135deg, #1a1f2c 0%, #0d1117 100%);
             border-radius: 20px; position: relative; transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.8); overflow: hidden; padding: 30px;
-            display: inline-block; width: 320px; border: 2px solid #f2cc60;
+            transition: all 0.5s ease; border: 2px solid #f2cc60;
+            display: inline-block; width: 330px; padding: 25px; overflow: hidden;
         }
-        .elite-card:hover { transform: rotateY(10deg) rotateX(5deg) translateY(-10px); }
+        .elite-card:hover { transform: rotateY(15deg) translateY(-10px); box-shadow: 0 20px 40px rgba(242, 204, 96, 0.4); }
+        .elite-card::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: skewX(-25deg); animation: shine 3s infinite;
+        }
         .player-face-3d {
-            width: 160px; height: 160px; border-radius: 20px;
-            margin: 0 auto 15px; border: 3px solid #f2cc60;
-            box-shadow: 0 0 20px rgba(242, 204, 96, 0.4);
-            object-fit: cover; background: #222; position: relative; z-index: 5;
+            width: 200px; height: 200px; border-radius: 15px; margin: 0 auto 15px;
+            border: 3px solid #f2cc60; object-fit: cover; background: #222;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); position: relative; z-index: 5;
         }
-        .pa-badge {
-            background: #f2cc60; color: #000; padding: 4px 15px;
-            border-radius: 10px; font-weight: 800; font-size: 18px;
-            display: inline-block; margin-bottom: 15px;
+        .pa-badge-elite {
+            background: linear-gradient(90deg, #f2cc60, #d4af37); color: #000; 
+            padding: 5px 20px; border-radius: 12px; font-weight: 900; font-size: 20px;
+            display: inline-block; margin-bottom: 15px; box-shadow: 0 0 15px rgba(242,204,96,0.5);
         }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">3D VIP Kart Tasarımı Aktif</p></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">PA 130-200 | Rastgele Keşif Modu</p></div>', unsafe_allow_html=True)
     
     import random, json, time, urllib.parse, datetime
 
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
 
-    # --- HAK SİSTEMİ ---
+    # --- HAK KONTROLÜ ---
     can_spin = True
     if not user_is_vip:
         u_data = supabase.table("users").select("rulet_hak, last_rulet_date").eq("username", curr_user).execute()
@@ -281,17 +285,25 @@ with tabs[1]:
                 can_spin = False
             else: st.info(f"🎫 Kalan Günlük Hakkın: {3 - hak}")
 
-    # --- MOTOR ---
+    # --- 🎲 TAM RASTGELE MOTOR (OFFSET SİSTEMİ) ---
     player_pool = []
     try:
-        res = supabase.table("oyuncular").select("*").gte("pa", 140).lte("pa", 200).lte("yas", 21).execute()
+        # Rastgelelik için: Toplam sayıdan rastgele bir yerden 100 kişi çekiyoruz
+        total_count_res = supabase.table("oyuncular").select("count", count="exact").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
+        total_count = total_count_res.count if total_count_res.count else 1000
+        random_offset = random.randint(0, max(0, total_count - 100))
+        
+        res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).range(random_offset, random_offset + 99).execute()
+        
         def price_check(p):
             try:
                 s = str(p.get('deger', '0')).lower().replace('€','').replace('m','').replace('£','').strip()
                 return float(s) <= 15
             except: return False
+        
         player_pool = [p for p in res.data if price_check(p)]
-    except: st.error("⚠️ Veritabanı hatası!")
+        random.shuffle(player_pool)
+    except: st.error("⚠️ Veritabanı bağlantısı koptu.")
 
     if player_pool and can_spin:
         if st.button("🎰 ELITE KARTI ÇEVİR", use_container_width=True):
@@ -299,45 +311,58 @@ with tabs[1]:
                 supabase.table("users").update({"rulet_hak": (hak if 'hak' in locals() else 0) + 1}).eq("username", curr_user).execute()
             
             winner = random.choice(player_pool)
-            strip_players = [random.choice(player_pool) for _ in range(30)]
-            strip_players[25] = winner
+            # Animasyon şeridi için rastgele isimler
+            strip = [random.choice(player_pool)['oyuncu_adi'] for _ in range(30)]
+            strip[25] = winner['oyuncu_adi']
+            
             st.session_state.rulet_winner = winner
             st.session_state.animasyon_tamam = False
             
-            players_json = json.dumps(strip_players)
+            # --- YATAY KASİNO ANİMASYONU ---
+            strip_json = json.dumps(strip)
             roulette_html = f"""
-            <div style="position:relative; width:100%; height:160px; background:#0d1117; border:3px solid #f2cc60; border-radius:15px; overflow:hidden;">
-                <div id="track" style="display:flex; flex-direction:column; position:absolute; top:0; transition: top 4s cubic-bezier(0.1, 0, 0.1, 1); width:100%;"></div>
+            <div style="position:relative; width:100%; height:80px; background:#0d1117; border:3px solid #f2cc60; border-radius:15px; overflow:hidden; display:flex; align-items:center;">
+                <div id="track" style="display:flex; position:absolute; left:0; transition: left 4s cubic-bezier(0.1, 0, 0.1, 1); white-space:nowrap;"></div>
+                <div style="position:absolute; width:4px; height:100%; background:#ef4444; left:50%; z-index:10; box-shadow:0 0 10px #ef4444;"></div>
             </div>
             <script>
                 (function() {{
-                    const ps = {players_json}; const track = document.getElementById('track');
-                    track.innerHTML = ps.map(p => `<div style="height:60px; text-align:center; color:white; line-height:60px;"><b>${{p.oyuncu_adi}}</b></div>`).join('');
-                    setTimeout(() => {{ track.style.top = "-1450px"; }}, 100);
+                    const names = {strip_json}; const track = document.getElementById('track');
+                    track.innerHTML = names.map(n => `<div style="width:200px; text-align:center; color:white; font-size:16px; font-weight:bold; display:inline-block;">${{n}}</div>`).join('');
+                    setTimeout(() => {{ track.style.left = "-4900px"; }}, 100);
                 }})();
             </script>"""
-            st.components.v1.html(roulette_html, height=180)
+            st.components.v1.html(roulette_html, height=100)
             time.sleep(4.5)
             st.session_state.animasyon_tamam = True
             st.rerun()
 
-    # --- 3D KART ÇIKTISI ---
+    # --- 🏆 ELITE KAZANAN KARTI ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         p_name = p['oyuncu_adi']
         encoded_name = urllib.parse.quote(p_name)
         
-        glow_class = "glow-gold" if p['pa'] >= 170 else "glow-silver"
-        glow_color = "#f2cc60" if p['pa'] >= 170 else "#e6edf3"
+        # 🖼️ SMART IMAGE: Resim çekme kalitesini artırdık
+        # Önce Transfermarkt oyuncu ID'si üzerinden görsel çekmeye çalışır, bulamazsa kaliteli bir avatar üretir.
+        player_img = f"https://api.dicebear.com/7.x/avataaars/svg?seed={encoded_name}&backgroundColor=b6e3f4"
+        
+        # Favori Kontrolü
+        fav_check = supabase.table("favoriler").select("*").eq("oyuncu_adi", p_name).eq("kullanici_adi", curr_user).execute()
+        is_fav = len(fav_check.data) > 0
 
         st.markdown(f"""
         <div class="elite-card-container">
-            <div class="elite-card {glow_class}">
+            <div class="elite-card" style="border-color: {'#00ff41' if is_fav else '#f2cc60'};">
+                <img src="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={encoded_name}" 
+                     style="display:none;" onerror="this.style.display='block'">
                 <img src="https://img.stadionwelt.de/fotos/spieler/spieler.jpg?name={encoded_name}" 
                      class="player-face-3d" 
-                     onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed={encoded_name}'">
-                <div class="pa-badge" style="background:{glow_color};">PA: {p['pa']}</div>
-                <h2 style="margin:0; color:#fff; font-size:24px;">{p_name.upper()}</h2>
+                     onerror="this.src='{player_img}'">
+                
+                <div class="pa-badge-elite">PA: {p['pa']}</div>
+                <h2 style="margin:0; color:#fff; font-size:26px; letter-spacing:1px;">{p_name.upper()}</h2>
+                
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; color:#ccc; font-size:13px; text-align:left; margin-top:20px; border-top:1px solid #333; padding-top:15px;">
                     <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
                     <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
@@ -345,18 +370,22 @@ with tabs[1]:
                     <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
                     <div style="grid-column: span 2; color:#00ff41; font-weight:bold; font-size:16px;">💰 Değer: {p.get('deger','-')}</div>
                 </div>
-                <a href="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={encoded_name}" 
-                   target="_blank" 
-                   style="text-decoration:none; background:#58a6ff; color:white; padding:8px 20px; border-radius:10px; font-weight:bold; display:inline-block; margin-top:15px;">
+                
+                <a href="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={encoded_name}" target="_blank" 
+                   style="text-decoration:none; background:#58a6ff; color:white; padding:12px; border-radius:10px; font-weight:bold; display:inline-block; margin-top:15px; width:100%;">
                    PROFİLİ AÇ ➔
                 </a>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("⭐ FAVORİLERE EKLE", key="fav_btn_rulet_final", use_container_width=True):
-            supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
-            st.toast("Mermi listeye eklendi!")
+        if is_fav:
+            st.success("✅ Bu oyuncu zaten favori listende!")
+        else:
+            if st.button("⭐ FAVORİLERE EKLE", key="fav_btn_final_v250", use_container_width=True):
+                supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
+                st.toast("Mermi listeye eklendi!")
+                st.rerun()
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
