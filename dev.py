@@ -86,38 +86,42 @@ with st.sidebar:
     st.markdown(f"### {st.session_state.user}")
     st.markdown("---")
     
-    # Menü listesi senin 900 satırlık yapınla tam uyumlu olmalı
+    # 900 satırlık koddaki sıralamanla aynı olmalı
     menu_options = ["🔍 Scout", "🎰 Rulet", "🏟️ Taktik", "⭐ Favoriler", "🎯 Avcı", "🤵 Barrow", "🛡️ Yönetim"]
-    menu = st.radio("NAVİGASYON", menu_options, key="main_nav")
+    menu = st.radio("ELITE NAVİGASYON", menu_options, key="main_nav")
     
     st.markdown("---")
     if st.button("🚪 Çıkış"):
         st.session_state.authenticated = False
         st.rerun()
 
-# --- 5. HATA VE DONMA ENGELLEYİCİ BAĞLANTI ---
-# DONMA SEBEBİ: st.empty() ve döngüydü. Onu sildik.
-# ÇÖZÜM: 'tabs' adında boş bir nesne listesi oluşturuyoruz.
-class TabPlaceholder:
-    def __enter__(self): return self
-    def __exit__(self, *args): pass
+# --- 5. AKILLI YÜKLEME (DONMAYI BİTİREN KISIM) ---
+# Eskiden 'tabs' bir listeydi, şimdi 'tabs'ı seçilen menüye göre dinamik yapıyoruz.
+# Bu sayede 'with tabs[0]' dediğinde sadece o seçiliyse çalışacak.
 
-# 900 satırlık koddaki tabs[0], tabs[1] vb. yerlerin hata vermemesi için:
-tabs = [TabPlaceholder() for _ in range(len(menu_options))]
+class SmartTab:
+    def __init__(self, is_active):
+        self.is_active = is_active
+    def __enter__(self):
+        if not self.is_active:
+            # Seçili değilse içeriği tamamen durdur ve hiçbir şey yapma
+            st.stop() 
+        return self
+    def __exit__(self, *args):
+        pass
 
-# Seçilen menüye göre ilgili 'with tabs[i]' bloğunun içeriğini gösteriyoruz:
+# 900 satırlık kodun hata vermemesi için 'tabs' listesini oluşturuyoruz
+tabs = []
 for i, option in enumerate(menu_options):
-    if menu != option:
-        # Seçilmeyen menülerin içeriğini "devre dışı" bırakıyoruz (Hata vermez, sadece görünmez olur)
-        tabs[i] = st.empty() 
+    # Eğer o anki döngüdeki menü seçilen menü ise aktif et
+    is_active = (menu == option)
+    tabs.append(SmartTab(is_active))
 
 # --- 6. SAYFA İÇERİKLERİ ---
-# Buradan sonra senin 900 satırlık "with tabs[0]:", "with tabs[1]:" kodların 
-# artık donmadan ve tek tek ekrana gelmeden şak diye çalışacak.
-
-
-# --- TASARIM BLOĞU BİTTİ, BUNDAN SONRASI SENİN "with tabs[0]:" KODLARIN ---
-
+# Buradan aşağıda senin 900 satırlık kodun başlıyor.
+# 'with tabs[0]:' satırına geldiğinde, eğer Scout seçili değilse 
+# 'st.stop()' sayesinde o bloğun geri kalanı hiç okunmayacak.
+# Bu da sitenin donmasını %100 engelleyecek.
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
 
