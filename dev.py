@@ -230,160 +230,126 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V300 - ULTRA RANDOM & SMART IMAGE) ---
+# --- 2. RULET (V400 - ELITE FIGURE & FULL DB MODE) ---
 with tabs[1]:
-    # 💎 GELİŞMİŞ CSS: 3D KART, IŞIK SIZMASI VE ANİMASYONLAR
+    # 💎 CSS: YENİ NESİL KART VE PARLAMA EFEKTİ
     st.markdown("""
         <style>
-        @keyframes shine { 0% {left: -100%;} 100% {left: 100%;} }
-        .elite-card-container { perspective: 1200px; margin-top: 30px; text-align: center; }
-        .elite-card {
+        .elite-card-box {
             background: linear-gradient(135deg, #1a1f2c 0%, #0d1117 100%);
-            border-radius: 20px; position: relative; transform-style: preserve-3d;
-            transition: all 0.5s ease; border: 2px solid #f2cc60;
-            display: inline-block; width: 330px; padding: 25px; overflow: hidden;
+            border: 2px solid #f2cc60; border-radius: 25px;
+            padding: 30px; text-align: center; color: white;
+            box-shadow: 0 0 30px rgba(242, 204, 96, 0.2);
+            margin: 20px auto; width: 340px; position: relative;
         }
-        .elite-card:hover { transform: rotateY(15deg) translateY(-10px); box-shadow: 0 20px 40px rgba(242, 204, 96, 0.4); }
-        .elite-card::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
-            transform: skewX(-25deg); animation: shine 3s infinite;
+        .figure-box {
+            width: 140px; height: 140px; background: rgba(242, 204, 96, 0.1);
+            border-radius: 50%; border: 3px solid #f2cc60;
+            margin: 0 auto 20px; display: flex; align-items: center;
+            justify-content: center; font-size: 60px;
+            box-shadow: inset 0 0 20px rgba(242, 204, 96, 0.3);
         }
-        .player-face-3d {
-            width: 200px; height: 200px; border-radius: 15px; margin: 0 auto 15px;
-            border: 3px solid #f2cc60; object-fit: cover; background: #222;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5); position: relative; z-index: 5;
-        }
-        .pa-badge-elite {
-            background: linear-gradient(90deg, #f2cc60, #d4af37); color: #000; 
-            padding: 5px 20px; border-radius: 12px; font-weight: 900; font-size: 20px;
-            display: inline-block; margin-bottom: 15px; box-shadow: 0 0 15px rgba(242,204,96,0.5);
+        .pa-tag {
+            background: #f2cc60; color: #000; padding: 5px 20px;
+            border-radius: 10px; font-weight: 900; font-size: 22px;
+            display: inline-block; margin-bottom: 15px;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">PA 130-200 | Rastgele Keşif Modu</p></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">Veritabanındaki Tüm Potansiyeller Dahil</p></div>', unsafe_allow_html=True)
     
     import random, json, time, urllib.parse, datetime
 
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
 
-    # --- HAK KONTROLÜ ---
-    can_spin = True
-    if not user_is_vip:
-        u_data = supabase.table("users").select("rulet_hak, last_rulet_date").eq("username", curr_user).execute()
-        if u_data.data:
-            today = str(datetime.date.today())
-            db_date = u_data.data[0].get("last_rulet_date")
-            hak = u_data.data[0].get("rulet_hak", 0)
-            if db_date != today:
-                supabase.table("users").update({"rulet_hak": 0, "last_rulet_date": today}).eq("username", curr_user).execute()
-                hak = 0
-            if hak >= 3:
-                st.warning("🚫 Günlük 3 çevirme hakkın doldu patron!")
-                can_spin = False
-            else: st.info(f"🎫 Kalan Günlük Hakkın: {3 - hak}")
-
-    # --- 🎲 TAM RASTGELE MOTOR (OFFSET SİSTEMİ) ---
+    # --- 🎲 TAM VERİTABANI ÇEKİMİ (RASTGELE SEÇİM) ---
     player_pool = []
     try:
-        # Rastgelelik için: Toplam sayıdan rastgele bir yerden 100 kişi çekiyoruz
-        total_count_res = supabase.table("oyuncular").select("count", count="exact").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
-        total_count = total_count_res.count if total_count_res.count else 1000
-        random_offset = random.randint(0, max(0, total_count - 100))
+        # PA 130-200 arası TÜM oyuncuları sayıyoruz
+        total_q = supabase.table("oyuncular").select("count", count="exact").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
+        total_count = total_q.count if total_q.count else 1000
         
-        res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).range(random_offset, random_offset + 99).execute()
+        # Her çevirmede farklı bir noktadan 100 kişi çekerek tam rastgelelik sağlıyoruz
+        rand_off = random.randint(0, max(0, total_count - 100))
+        res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).range(rand_off, rand_off + 99).execute()
         
-        def price_check(p):
+        def filter_price(p):
             try:
-                s = str(p.get('deger', '0')).lower().replace('€','').replace('m','').replace('£','').strip()
-                return float(s) <= 15
+                val = str(p.get('deger', '0')).lower().replace('€','').replace('m','').replace('£','').strip()
+                return float(val) <= 15
             except: return False
         
-        player_pool = [p for p in res.data if price_check(p)]
+        player_pool = [p for p in res.data if filter_price(p)]
         random.shuffle(player_pool)
-    except: st.error("⚠️ Veritabanı bağlantısı koptu.")
+    except:
+        st.error("⚠️ Veritabanına bağlanılamadı patron!")
 
-    if player_pool and can_spin:
-        if st.button("🎰 ELITE KARTI ÇEVİR", use_container_width=True):
-            if not user_is_vip:
-                supabase.table("users").update({"rulet_hak": (hak if 'hak' in locals() else 0) + 1}).eq("username", curr_user).execute()
-            
+    # --- 🎰 ANİMASYONLU ÇEVİRME ---
+    if player_pool:
+        if st.button("🎰 RULETİ ÇEVİR (TÜM LİSTE)", use_container_width=True):
             winner = random.choice(player_pool)
-            # Animasyon şeridi için rastgele isimler
-            strip = [random.choice(player_pool)['oyuncu_adi'] for _ in range(30)]
-            strip[25] = winner['oyuncu_adi']
-            
             st.session_state.rulet_winner = winner
             st.session_state.animasyon_tamam = False
             
-            # --- YATAY KASİNO ANİMASYONU ---
-            strip_json = json.dumps(strip)
-            roulette_html = f"""
-            <div style="position:relative; width:100%; height:80px; background:#0d1117; border:3px solid #f2cc60; border-radius:15px; overflow:hidden; display:flex; align-items:center;">
-                <div id="track" style="display:flex; position:absolute; left:0; transition: left 4s cubic-bezier(0.1, 0, 0.1, 1); white-space:nowrap;"></div>
-                <div style="position:absolute; width:4px; height:100%; background:#ef4444; left:50%; z-index:10; box-shadow:0 0 10px #ef4444;"></div>
-            </div>
-            <script>
-                (function() {{
-                    const names = {strip_json}; const track = document.getElementById('track');
-                    track.innerHTML = names.map(n => `<div style="width:200px; text-align:center; color:white; font-size:16px; font-weight:bold; display:inline-block;">${{n}}</div>`).join('');
-                    setTimeout(() => {{ track.style.left = "-4900px"; }}, 100);
-                }})();
-            </script>"""
-            st.components.v1.html(roulette_html, height=100)
-            time.sleep(4.5)
+            # Eski yavaş animasyonu sildik, yerine mermi gibi şık bir efekt koyduk
+            placeholder = st.empty()
+            with placeholder.container():
+                st.markdown('<div style="text-align:center; padding:40px;"><h3 style="color:#f2cc60;">🔍 Veriler Analiz Ediliyor...</h3></div>', unsafe_allow_html=True)
+                bar = st.progress(0)
+                for percent in range(100):
+                    time.sleep(0.01)
+                    bar.progress(percent + 1)
+            placeholder.empty()
             st.session_state.animasyon_tamam = True
             st.rerun()
 
-    # --- 🏆 ELITE KAZANAN KARTI ---
+    # --- 🏆 KAZANAN KARTI (HATASIZ KOD) ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         p_name = p['oyuncu_adi']
-        encoded_name = urllib.parse.quote(p_name)
         
-        # 🖼️ SMART IMAGE: Resim çekme kalitesini artırdık
-        # Önce Transfermarkt oyuncu ID'si üzerinden görsel çekmeye çalışır, bulamazsa kaliteli bir avatar üretir.
-        player_img = f"https://api.dicebear.com/7.x/avataaars/svg?seed={encoded_name}&backgroundColor=b6e3f4"
-        
-        # Favori Kontrolü
-        fav_check = supabase.table("favoriler").select("*").eq("oyuncu_adi", p_name).eq("kullanici_adi", curr_user).execute()
-        is_fav = len(fav_check.data) > 0
+        # Mevkiye göre figür belirleme
+        mevki = p.get('mevki', '').upper()
+        if "GK" in mevki: fig = "🧤"
+        elif any(x in mevki for x in ["DC", "DL", "DR"]): fig = "🛡️"
+        elif "ST" in mevki or "CF" in mevki: fig = "⚽"
+        else: fig = "🎯"
 
-        st.markdown(f"""
-        <div class="elite-card-container">
-            <div class="elite-card" style="border-color: {'#00ff41' if is_fav else '#f2cc60'};">
-                <img src="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={encoded_name}" 
-                     style="display:none;" onerror="this.style.display='block'">
-                <img src="https://img.stadionwelt.de/fotos/spieler/spieler.jpg?name={encoded_name}" 
-                     class="player-face-3d" 
-                     onerror="this.src='{player_img}'">
-                
-                <div class="pa-badge-elite">PA: {p['pa']}</div>
-                <h2 style="margin:0; color:#fff; font-size:26px; letter-spacing:1px;">{p_name.upper()}</h2>
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; color:#ccc; font-size:13px; text-align:left; margin-top:20px; border-top:1px solid #333; padding-top:15px;">
-                    <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
-                    <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
-                    <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
-                    <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
-                    <div style="grid-column: span 2; color:#00ff41; font-weight:bold; font-size:16px;">💰 Değer: {p.get('deger','-')}</div>
-                </div>
-                
-                <a href="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={encoded_name}" target="_blank" 
-                   style="text-decoration:none; background:#58a6ff; color:white; padding:12px; border-radius:10px; font-weight:bold; display:inline-block; margin-top:15px; width:100%;">
-                   PROFİLİ AÇ ➔
-                </a>
+        # Favori Kontrolü
+        is_fav = False
+        try:
+            f_check = supabase.table("favoriler").select("*").eq("oyuncu_adi", p_name).eq("kullanici_adi", curr_user).execute()
+            is_fav = len(f_check.data) > 0
+        except: pass
+
+        card_border = "#00ff41" if is_fav else "#f2cc60"
+        tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p_name)}"
+
+        # HTML'i f-string'den ayırdık (Hata vermemesi için)
+        html_card = f"""
+        <div class="elite-card-box" style="border-color: {card_border};">
+            <div class="figure-box">{fig}</div>
+            <div class="pa-tag">PA: {p['pa']}</div>
+            <h2 style="margin:0; font-size:24px;">{p_name.upper()}</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px; text-align:left; font-size:13px; color:#ccc; border-top:1px solid #333; padding-top:15px;">
+                <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
+                <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
+                <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
+                <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
             </div>
+            <div style="margin-top:15px; color:#00ff41; font-weight:bold; font-size:18px;">💰 Değer: {p.get('deger','-')}</div>
+            <a href="{tm_link}" target="_blank" style="text-decoration:none; background:#58a6ff; color:white; padding:10px 20px; border-radius:10px; display:inline-block; margin-top:15px; width:80%;">PROFİLİ AÇ ➔</a>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(html_card, unsafe_allow_html=True)
         
         if is_fav:
             st.success("✅ Bu oyuncu zaten favori listende!")
         else:
-            if st.button("⭐ FAVORİLERE EKLE", key="fav_btn_final_v250", use_container_width=True):
-                supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
+            if st.button("⭐ FAVORİLERE EKLE", use_container_width=True):
+                supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','-'), "pa": p['pa'], "mevki": p.get('mevki','-'), "kullanici_adi": curr_user}).execute()
                 st.toast("Mermi listeye eklendi!")
                 st.rerun()
             
