@@ -229,7 +229,10 @@ with tabs[0]:
         if c1.button("⬅️ Geri", use_container_width=True) and st.session_state.page > 0: st.session_state.page -= 1; st.rerun()
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
-# --- 2. RULET (V500 - SHADOW ELITE & NEON SCAN) ---
+
+
+
+# --- 2. RULET (V510 - SHADOW ELITE & BUTON FIX) ---
 with tabs[1]:
     # 💎 CSS: SHADOW FIGURE VE NEON SCAN EFEKTLERİ
     st.markdown("""
@@ -243,27 +246,19 @@ with tabs[1]:
             padding: 25px; text-align: center; color: white;
             position: relative; overflow: hidden; width: 330px; margin: 0 auto;
         }
-        
-        .shadow-figure-container {
+        .shadow-svg-container {
             width: 150px; height: 150px; margin: 0 auto 15px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             background: radial-gradient(circle, rgba(242,204,96,0.1) 0%, rgba(0,0,0,0) 70%);
-            position: relative; border: 2px solid rgba(242,204,96,0.3);
+            border: 2px solid rgba(242,204,96,0.3);
         }
-        
-        .shadow-svg { width: 100px; height: 100px; fill: #f2cc60; opacity: 0.9; filter: drop-shadow(0 0 10px #f2cc60); }
-        
         .scan-anim-box {
-            width: 100%; height: 100px; border: 2px solid #f2cc60; border-radius: 10px;
+            width: 100%; height: 80px; border: 2px solid #f2cc60; border-radius: 10px;
             position: relative; overflow: hidden; background: #000; margin-bottom: 20px;
         }
         .scan-line {
             position: absolute; width: 100%; height: 2px; background: #f2cc60;
             top: 0; box-shadow: 0 0 15px #f2cc60; animation: scan-line 1.5s linear infinite;
-        }
-        .scan-text { 
-            position: absolute; width: 100%; text-align: center; top: 40%; 
-            font-family: monospace; color: #f2cc60; font-weight: bold;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -275,50 +270,39 @@ with tabs[1]:
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
 
-    # --- 🎲 TAM VERİTABANI MOTORU ---
+    # --- 🎲 VERİTABANI MOTORU ---
     player_pool = []
     try:
-        # Tüm havuzu çekmek için rastgele bir offset belirliyoruz
+        # PA 130-200 arası tüm oyuncuları say ve rastgele 100 tanesini çek
         total_q = supabase.table("oyuncular").select("count", count="exact").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
-        total_count = total_q.count if total_q.count else 1000
+        total_count = total_q.count if total_q.count else 142
         rand_off = random.randint(0, max(0, total_count - 100))
-        
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).range(rand_off, rand_off + 99).execute()
         
-        # Filtre: 15M altı oyuncular (Mermiler)
-        def check_p(p):
+        def filter_p(p):
             try:
                 val = str(p.get('deger', '0')).lower().replace('€','').replace('m','').strip()
                 return float(val) <= 15
             except: return False
         
-        player_pool = [p for p in res.data if check_p(p)]
+        player_pool = [p for p in res.data if filter_p(p)]
         random.shuffle(player_pool)
-    except: st.error("⚠️ Veritabanı hatası!")
+    except: pass
 
+    # --- 🎰 BAŞLATMA BUTONU ---
     if player_pool:
-        if st.button("🎰 ELITE SCOUTING'I BAŞLAT", use_container_width=True):
+        # DİKKAT: Butonun görünmesi için can_spin kontrolünü basit tuttuk
+        if st.button("🚀 ANALİZİ BAŞLAT", key="btn_start_rulet", use_container_width=True):
             winner = random.choice(player_pool)
             st.session_state.rulet_winner = winner
             st.session_state.animasyon_tamam = False
             
-            # --- YENİ NESİL TARAMA ANİMASYONU ---
+            # --- TARAMA ANİMASYONU ---
             placeholder = st.empty()
             with placeholder.container():
-                st.markdown(f"""
-                    <div class="scan-anim-box">
-                        <div class="scan-line"></div>
-                        <div class="scan-text">VERİTABANI TARANIYOR...</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                # İsimlerin hızlıca geçmesi efekti
-                name_display = st.empty()
-                for _ in range(15):
-                    temp_name = random.choice(player_pool)['oyuncu_adi']
-                    name_display.markdown(f"<h3 style='text-align:center; color:#8b949e;'>{temp_name}</h3>", unsafe_allow_html=True)
-                    time.sleep(0.1)
+                st.markdown('<div class="scan-anim-box"><div class="scan-line"></div><div style="color:#f2cc60; text-align:center; padding-top:25px; font-weight:bold;">SİSTEM TARANIYOR...</div></div>', unsafe_allow_html=True)
+                time.sleep(2.5)
             placeholder.empty()
-            name_display.empty()
             st.session_state.animasyon_tamam = True
             st.rerun()
 
@@ -327,11 +311,11 @@ with tabs[1]:
         p = st.session_state.rulet_winner
         p_name = p['oyuncu_adi']
         pa_val = int(p.get('pa', 0))
-        
-        # PA'ya göre ışık rengi
         glow_color = "#f2cc60" if pa_val >= 170 else "#e6edf3"
-        aura_style = f"filter: drop-shadow(0 0 15px {glow_color}); fill: {glow_color};"
         
+        # Gölge Figür SVG (Hata vermemesi için tırnakları düzelttim)
+        shadow_svg = f'<svg width="100" height="100" viewBox="0 0 24 24" fill="{glow_color}" style="filter: drop-shadow(0 0 10px {glow_color});"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>'
+
         # Favori Kontrolü
         try:
             f_res = supabase.table("favoriler").select("*").eq("oyuncu_adi", p_name).eq("kullanici_adi", curr_user).execute()
@@ -339,39 +323,28 @@ with tabs[1]:
         except: is_fav = False
 
         card_border = "#00ff41" if is_fav else glow_color
-        tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p_name)}"
 
         st.markdown(f"""
-        <div class="elite-card-box" style="border: 2px solid {card_border}; animation: neon-pulse 2s infinite;">
-            <div class="shadow-figure-container">
-                <svg class="shadow-svg" viewBox="0 0 24 24" style="{aura_style}">
-                    <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/>
-                </svg>
-            </div>
-            <div style="background:{glow_color}; color:#000; padding:3px 15px; border-radius:8px; font-weight:900; display:inline-block; margin-bottom:10px;">
-                PA: {pa_val}
-            </div>
-            <h2 style="margin:0; letter-spacing:1px;">{p_name.upper()}</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:20px; text-align:left; font-size:12px; color:#8b949e; border-top:1px solid #30363d; padding-top:15px;">
+        <div class="elite-card-box" style="border-color: {card_border}; animation: neon-pulse 2s infinite;">
+            <div class="shadow-svg-container">{shadow_svg}</div>
+            <div style="background:{glow_color}; color:#000; padding:2px 12px; border-radius:8px; font-weight:900; display:inline-block; margin-bottom:10px;">PA: {pa_val}</div>
+            <h2 style="margin:0;">{p_name.upper()}</h2>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px; text-align:left; font-size:12px; color:#ccc; border-top:1px solid #333; padding-top:15px;">
                 <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
                 <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
                 <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
                 <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
             </div>
             <div style="margin-top:15px; color:#00ff41; font-weight:bold; font-size:18px;">💰 {p.get('deger','-')}</div>
-            <a href="{tm_link}" target="_blank" style="text-decoration:none; background:#58a6ff; color:white; padding:10px; border-radius:8px; display:inline-block; margin-top:15px; width:100%; font-weight:bold;">
-                TRANSFERMARKT ➔
-            </a>
+            <a href="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p_name)}" target="_blank" style="text-decoration:none; background:#58a6ff; color:white; padding:10px; border-radius:8px; display:inline-block; margin-top:15px; width:100%; font-weight:bold;">TRANSFERMARKT ➔</a>
         </div>
         """, unsafe_allow_html=True)
         
-        if is_fav:
-            st.success(f"✅ {p_name} zaten mermi listende!")
-        else:
-            if st.button("⭐ LİSTEYE EKLE", key="rulet_fav_add", use_container_width=True):
+        if not is_fav:
+            if st.button("⭐ LİSTEYE EKLE", key="rulet_add_fav_last"):
                 supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','-'), "pa": pa_val, "mevki": p.get('mevki','-'), "kullanici_adi": curr_user}).execute()
-                st.toast("Mermi eklendi patron!")
-                st.rerun() 
+                st.toast("Mermi eklendi!")
+                st.rerun()
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
