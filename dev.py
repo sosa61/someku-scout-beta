@@ -319,13 +319,12 @@ with tabs[1]:
         pool = [p for p in res.data if filter_engine(p)]
     except: pool = []
 
-    # 🎰 İLK TETİKLEYİCİ (Eğer hiç winner yoksa veya 'Yeni Paket'e basıldıysa)
-    if not st.session_state.get('rulet_winner') or st.session_state.get('reset_rulet'):
+    # 🎰 İLK TETİKLEYİCİ
+    if not st.session_state.get('rulet_winner'):
         if pool:
             if st.button("🏆 CHAMPIONS PACK AÇ", key="v20_main_btn", use_container_width=True):
                 st.session_state.rulet_winner = random.choice(pool)
                 st.session_state.animasyon_tamam = False
-                st.session_state.reset_rulet = False
                 st.markdown('<div class="stage-3d"><div class="pack-frame-3d" style="height:620px;"><div class="pack-gate"><div class="pack-side">★</div><div class="pack-side">★</div></div></div></div>', unsafe_allow_html=True)
                 time.sleep(0.1)
                 st.session_state.animasyon_tamam = True
@@ -377,7 +376,8 @@ with tabs[1]:
                 st.toast("Mermi kulübe katıldı!")
         with col2:
             if st.button("🔄 YENİ PAKET AÇ", key="v20_retry", use_container_width=True):
-                st.session_state.reset_rulet = True
+                st.session_state.rulet_winner = None # ESKİ KAZANANI SİL
+                st.session_state.animasyon_tamam = False
                 st.rerun()
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
