@@ -22,62 +22,63 @@ try:
 except Exception as e:
     st.error(f"Bağlantı kurulum hatası: {e}")
 
-# --- 2. OTURUM AYARLARI ---
-if 'authenticated' not in st.session_state: st.session_state.authenticated = False
-if 'user' not in st.session_state: st.session_state.user = None
-if 'is_vip' not in st.session_state: st.session_state.is_vip = False
-if 'fav_list' not in st.session_state: st.session_state.fav_list = []
-if 'page' not in st.session_state: st.session_state.page = 0
-# --- 3. 🔄 F5 VE HAFIZA KONTROLÜ (ZIRHLI VERSİYON) ---
-query_user = st.query_params.get("user", None)
-is_authenticated = st.session_state.get("authenticated", False)
+# --- 1. TASARIM VE GİRİŞ DÜZENLEME BLOĞU (SADECE BURAYI EKLE) ---
 
-# EĞER GİZLİ SEKMEDEN LİNKLE GELİNİYORSA:
-# (Yani URL'de isim var ama bu tarayıcıda henüz şifre girilmemişse)
-if query_user and not is_authenticated:
-    # Hafızayı zorla boş tut, URL'deki isme inanma!
-    st.session_state.user = None 
-    st.session_state.authenticated = False
+# Sayfa ayarını en üste taşıdık (Varsa eskisiyle değiştir)
+st.set_page_config(page_title="BETA - SOMEKU SCOUT", layout="wide", page_icon="🕵️")
 
-# --- 5. GİRİŞ VE KAYIT EKRANI (KURŞUN GEÇİRMEZ) ---
+# MODER PREMIUM TASARIM (CSS)
+st.markdown("""
+    <style>
+    .stApp { background: linear-gradient(145deg, #0d1117 0%, #161b22 100%); color: #e6edf3; }
+    div.stButton > button {
+        background: linear-gradient(90deg, #238636 0%, #2ea043 100%);
+        color: white; border: none; border-radius: 8px; padding: 10px 24px;
+        font-weight: 600; transition: all 0.3s ease; width: 100%;
+    }
+    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(46, 160, 67, 0.4); }
+    [data-testid="stSidebar"] { background-color: #0d1117; border-right: 1px solid #30363d; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] {
+        height: 45px; background-color: #161b22; border-radius: 8px 8px 0 0;
+        border: 1px solid #30363d; color: #8b949e;
+    }
+    .stTabs [aria-selected="true"] { background-color: #238636 !important; color: white !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# GİRİŞ KONTROLÜ (SENİN ŞİFRENİ VE TABS HATASINI DÜZELTEN KISIM)
 if not st.session_state.authenticated:
     st.markdown('<h1 style="text-align:center;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
-    
-    # Giriş ve Kayıt sekmelerini ayırıyoruz
     auth_tabs_ui = st.tabs(["Giriş Yap", "Kayıt Ol"])
 
     with auth_tabs_ui[0]:
-        u_id = st.text_input("Kullanıcı Adı:", key="login_u")
-        u_pw = st.text_input("Şifre:", type="password", key="login_p")
-        
+        u_id = st.text_input("Kullanıcı Adı:", key="l_u")
+        u_pw = st.text_input("Şifre:", type="password", key="l_p")
         if st.button("Sisteme Giriş Yap", use_container_width=True):
-            if u_id == "someku" and u_pw == "28616128Ok": # Senin özel admin girişin
+            if u_id == "someku" and u_pw == "28616128Ok": # Admin girişi garantisi
                 st.session_state.authenticated = True
                 st.session_state.user = u_id
                 st.session_state.is_vip = True
                 st.rerun()
             else:
-                try:
-                    # Veritabanından kontrol
-                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                    if res.data:
-                        st.session_state.authenticated = True
-                        st.session_state.user = u_id
-                        st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
-                        st.rerun()
-                    else:
-                        st.error("❌ Kullanıcı adı veya şifre hatalı patron!")
-                except Exception as e:
-                    st.error(f"⚠️ Veritabanı bağlantı hatası: {e}")
+                res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                if res.data:
+                    st.session_state.authenticated = True
+                    st.session_state.user = u_id
+                    st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
+                    st.rerun()
+                else: st.error("❌ Hatalı kullanıcı adı veya şifre!")
     
     with auth_tabs_ui[1]:
         st.info("✨ Yeni bir hesap oluşturun.")
-        # Kayıt kodların buraya devam edebilir...
-        
-    st.stop() # Giriş yapmadan aşağıya geçme
+        # Buraya senin kayıt kodların (new_user, new_email vs.) gelecek
+    st.stop()
 
-# --- 6. ANA PANEL VE SEKMELER ---
+# ANA SEKMELER (HATA VEREN TABS TANIMLAMASI BURADA OLMALI)
 tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
+
+# --- TASARIM BLOĞU BİTTİ, BUNDAN SONRASI SENİN "with tabs[0]:" KODLARIN ---
 
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
