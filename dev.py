@@ -3,130 +3,131 @@ from supabase import create_client, Client
 import urllib.parse
 import pandas as pd
 import random
+import json
 import time
 import re
 import streamlit.components.v1 as components
-import matplotlib.pyplot as plt
-import datetime
-import os
-import subprocess
-import threading
 import unicodedata
+import datetime
+
+# Sayfa ayarını en üste taşıdık (Zırhlı Versiyon)
+st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="🕵️")
 
 # --- 1. BAĞLANTI AYARLARI ---
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
 
-try:
-    supabase = create_client(URL, KEY)
-except Exception as e:
-    st.error(f"Bağlantı kurulum hatası: {e}")
+if 'supabase' not in st.session_state:
+    st.session_state.supabase = create_client(URL, KEY)
+supabase = st.session_state.supabase
 
-# --- 2. OTURUM AYARLARI ---
-if 'authenticated' not in st.session_state: st.session_state.authenticated = False
-if 'user' not in st.session_state: st.session_state.user = None
-if 'is_vip' not in st.session_state: st.session_state.is_vip = False
-if 'fav_list' not in st.session_state: st.session_state.fav_list = []
-if 'page' not in st.session_state: st.session_state.page = 0
-# --- 3. 🔄 F5 VE HAFIZA KONTROLÜ (ZIRHLI VERSİYON) ---
-query_user = st.query_params.get("user", None)
-is_authenticated = st.session_state.get("authenticated", False)
+# Oturum Sigortası (Hata Engelleyici)
+FOR_KEYS = {'authenticated': False, 'user': None, 'is_vip': False, 'page': 0, 'fav_list': []}
+for key, val in FOR_KEYS.items():
+    if key not in st.session_state: st.session_state[key] = val
 
-# EĞER GİZLİ SEKMEDEN LİNKLE GELİNİYORSA:
-# (Yani URL'de isim var ama bu tarayıcıda henüz şifre girilmemişse)
-if query_user and not is_authenticated:
-    # Hafızayı zorla boş tut, URL'deki isme inanma!
-    st.session_state.user = None 
-    st.session_state.authenticated = False
+# --- 2. ZENGİN PEMBE-MOR UI (CSS) ---
+st.markdown("""
+    <style>
+    /* Ana Arka Plan Gradiyenti (Attığın resimdeki gibi) */
+    .stApp { 
+        background: linear-gradient(135deg, #7928ca 0%, #ff0080 100%); 
+        color: white; 
+    }
+    
+    /* 3D Figür Kutusu Tasarımı */
+    .figure-box {
+        background: #ff6600; /* Kutu turuncusu */
+        border: 4px solid #fff;
+        border-radius: 20px;
+        padding: 15px;
+        box-shadow: 15px 15px 30px rgba(0,0,0,0.4);
+        text-align: center;
+        transition: 0.3s;
+        margin-bottom: 20px;
+    }
+    .figure-box:hover { transform: translateY(-10px) rotate(2deg); }
+    .figure-img { width: 100%; border-radius: 12px; margin-bottom: 10px; border: 2px solid white; }
+    .figure-title { font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; color:white;}
+    .figure-tag { background: white; color: #ff6600; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; display: inline-block; margin-top: 5px; }
 
-# --- 5. GİRİŞ VE KAYIT EKRANI ---
-if not is_authenticated:
-    st.markdown('<h1 style="text-align:center;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
-    if query_user:
-        st.warning("⚠️ Bu profil kilitlidir. Görmek için önce giriş yapmalısın!")
+    /* Giriş Butonları */
+    div.stButton > button {
+        background: linear-gradient(90deg, #facc15 0%, #eab308 100%) !important;
+        color: #000 !important; border: none !important; border-radius: 50px !important;
+        font-weight: 800 !important; height: 50px !important; transition: 0.3s !important;
+    }
+    div.stButton > button:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
 
-    auth_tabs = st.tabs(["Giriş Yap", "Kayıt Ol"])
+    /* Sidebar Temizleme */
+    [data-testid="stSidebar"] { background-color: rgba(0,0,0,0.3) !important; border-right: 1px solid rgba(255,255,255,0.1); }
+    
+    /* Tabs Tasarımı */
+    .stTabs [data-baseweb="tab"] { background-color: rgba(255,255,255,0.1); border-radius: 10px; color: white; margin-right:5px;}
+    .stTabs [aria-selected="true"] { background-color: #ff6600 !important; color: white !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    with auth_tabs[0]:
-        u_id = st.text_input("Kullanıcı Adı:", key="main_l_user")
-        u_pw = st.text_input("Şifre:", type="password", key="main_l_pw")
-        if st.button("Sisteme Giriş Yap"):
-            try:
-                res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                if res.data:
-                    st.session_state.authenticated = True
-                    st.session_state.user = u_id
-                    st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
-                    st.query_params["user"] = u_id
-                    st.rerun()
-                elif u_id == "someku" and u_pw == "28616128Ok":
+# --- 3. GİRİŞ VE KAYIT EKRANI ---
+if not st.session_state.authenticated:
+    st.markdown('<h1 style="text-align:center; font-size:50px; color:white;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
+    
+    auth_tabs_ui = st.tabs(["Giriş Yap", "Kayıt Ol"])
+
+    with auth_tabs_ui[0]: # GİRİŞ
+        with st.form("login_form"):
+            u_id = st.text_input("Kullanıcı Adı")
+            u_pw = st.text_input("Şifre", type="password")
+            if st.form_submit_button("SİSTEME BAĞLAN", use_container_width=True):
+                # Admin kontrolü
+                if u_id == "someku" and u_pw == "28616128Ok":
                     st.session_state.authenticated = True
                     st.session_state.user = u_id
                     st.session_state.is_vip = True
-                    st.query_params["user"] = u_id
                     st.rerun()
                 else:
-                    st.error("❌ Hatalı kullanıcı adı veya şifre!")
-            except Exception as e:
-                st.error(f"⚠️ Giriş Hatası: {e}")
+                    try:
+                        res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                        if res.data:
+                            st.session_state.authenticated = True
+                            st.session_state.user = u_id
+                            st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
+                            st.rerun()
+                        else: st.error("❌ Yanlış kullanıcı adı veya şifre!")
+                    except: st.error("⚠️ Veritabanı bağlantı hatası!")
 
-    with auth_tabs[1]:
-        st.info("✨ Yeni bir hesap oluşturun.")
-        new_user = st.text_input("Yeni Kullanıcı Adı:", key="reg_user")
-        new_email = st.text_input("E-posta Adresi:", key="reg_email")
-        new_pw = st.text_input("Yeni Şifre:", type="password", key="reg_pw")
-        if st.button("Hemen Kayıt Ol", use_container_width=True):
-            if new_user and new_email and new_pw:
-                check = supabase.table("users").select("*").or_(f"username.eq.{new_user},email.eq.{new_email}").execute()
-                if check.data:
-                    st.error("❌ Bu kullanıcı adı veya e-posta zaten kullanılıyor!")
-                else:
-                    data = {"username": new_user, "email": new_email, "password": new_pw, "is_vip": False, "puan": 0}
-                    supabase.table("users").insert(data).execute()
-                    st.success("✅ Kayıt başarılı! Giriş sekmesine dönebilirsin.")
-    st.stop()
-
-# --- 6. YAN MENÜ VE ÇIKİŞ BUTONU ---
-with st.sidebar:
-    st.markdown(f"### 👤 Hoş geldin, {st.session_state.user}")
-    if st.session_state.is_vip:
-        st.success("🌟 VIP SCOUT ÜYESİ")
-    else:
-        st.info("🆓 STANDART ÜYE")
+    with auth_tabs_ui[1]: # KAYIT
+        with st.form("reg_form"):
+            n_user = st.text_input("Yeni Kullanıcı Adı")
+            n_email = st.text_input("E-posta")
+            n_pw = st.text_input("Yeni Şifre", type="password")
+            if st.form_submit_button("HESAP OLUŞTUR"):
+                if n_user and n_email and n_pw:
+                    check = supabase.table("users").select("*").eq("username", n_user).execute()
+                    if check.data: st.error("❌ Bu isim sistemde kayıtlı!")
+                    else:
+                        supabase.table("users").insert({"username": n_user, "email": n_email, "password": n_pw, "is_vip": False, "puan": 0}).execute()
+                        st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
     
-    st.markdown("---")
-    if st.button("🚪 Güvenli Çıkış Yap", use_container_width=True):
-        st.session_state.clear() # Tüm hafızayı boşalt
-        st.query_params.clear()  # URL'yi temizle
-        st.rerun()
+    # Giriş Ekranındaki Hayali Figür Galerisi (Attığın resimdeki gibi)
+    st.markdown("<br><h3 style='text-align:center; color:white;'>🔥 SON TESLİM EDİLEN FİGÜRLER</h3>", unsafe_allow_html=True)
+    g1, g2, g3 = st.columns(3)
+    
+    # Resim linkleri Midjourney ile üretilmiş gibi duracak (Temsili linkler)
+    with g1:
+        st.markdown("""<div class="figure-box"><img src="https://assets.mixkit.co/videos/preview/mixkit-player-jumping-in-soccer-match-34444-large.mp4" class="figure-img"><div class="figure-title">MBAPPE #7</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
+    with g2:
+        st.markdown("""<div class="figure-box"><img src="https://assets.mixkit.co/videos/preview/mixkit-goalkeeper-catching-soccer-ball-34436-large.mp4" class="figure-img"><div class="figure-title">MUSLERA #1</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
+    with g3:
+        st.markdown("""<div class="figure-box"><img src="https://assets.mixkit.co/videos/preview/mixkit-soccer-player-kicking-ball-in-stadium-34438-large.mp4" class="figure-img"><div class="figure-title">ICARDI #9</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
+    
+    st.stop() # Giriş yapmadan aşağıya geçme
 
-# --- 7. VIP TAZELEME MOTORU ---
-try:
-    v_res = supabase.table("users").select("is_vip").eq("username", st.session_state.user).execute()
-    if v_res.data:
-        st.session_state.is_vip = bool(v_res.data[0].get("is_vip", False))
-except:
-    pass
+# --- 6. ANA PANEL VE SEKMELER (HATA GİDERİCİ BAĞLANTI) ---
+tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
 
-# Sayfa ayarlarını dükkanın içine girdikten sonra yapıyoruz
-st.set_page_config(page_title="SOMEKU SCOUT", layout="wide", page_icon="🕵️")
-
-# Buradan aşağısı senin tabs = st.tabs([...]) kodlarınla devam edecek...
-
-# --- SAYFA AYARLARI ---
-st.set_page_config(page_title="SOMEKU SCOUT", layout="wide", page_icon="🕵️")
-
-# --- TASARIM (CSS) ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-    .stApp { background-color: #0d1117; color: white; }
-    .player-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 5px solid #3b82f6; transition: 0.3s; }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- ANA SEKMELER ---
-tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "📋 11 KUR", "⭐ FAVORİLER", "🕵️ YETENEK AVI", "🤖 BARROW AI", "🛠️ ADMIN"])
+# Senin koddaki tabs[0], tabs[1] yapılarını buraya bağla...
+# HİÇBİR ŞEYİ SİLMEDEN YERLEŞTİREBİLİRSİN.
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
 
