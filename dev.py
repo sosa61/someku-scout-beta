@@ -3,17 +3,13 @@ from supabase import create_client, Client
 import urllib.parse
 import pandas as pd
 import random
+import json
 import time
 import re
 import streamlit.components.v1 as components
-import matplotlib.pyplot as plt
-import datetime
-import os
-import subprocess
-import threading
 import unicodedata
 
-# --- 1. SİSTEM AYARLARI (EN ÜSTTE) ---
+# --- 1. SİSTEM VE SAYFA AYARLARI ---
 st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="💎")
 
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
@@ -23,12 +19,12 @@ if 'supabase' not in st.session_state:
     st.session_state.supabase = create_client(URL, KEY)
 supabase = st.session_state.supabase
 
-# KRİTİK: Tüm değişkenleri (page dahil) en başta tanımlıyoruz ki hata vermesin
+# KRİTİK HATA ENGELLEYİCİ: Tüm session değişkenlerini sigortalıyoruz
 FOR_KEYS = {
     'authenticated': False, 
     'user': None, 
     'is_vip': False, 
-    'menu': "🔍 Scout", 
+    'menu': "🔍 Scout Merkezi", 
     'page': 0, 
     'fav_list': [],
     'rulet_winner': None,
@@ -42,27 +38,18 @@ st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #e6edf3; }
     [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
-    
-    /* Premium Butonlar */
     div.stButton > button {
         background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
         color: white !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important;
-        transition: 0.3s;
     }
-    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4); }
-    
-    /* Kart Tasarımları */
-    .elite-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 15px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 3. GİRİŞ VE KAYIT SİSTEMİ ---
 if not st.session_state.authenticated:
     st.markdown('<h1 style="text-align:center; color:#58a6ff;">💎 SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
-    
     auth_tab = st.tabs(["Giriş Yap", "Kayıt Ol"])
-    
-    with auth_tab[0]: # GİRİŞ
+    with auth_tab[0]:
         with st.form("login"):
             u_id = st.text_input("Kullanıcı Adı")
             u_pw = st.text_input("Şifre", type="password")
@@ -76,8 +63,7 @@ if not st.session_state.authenticated:
                         st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False))})
                         st.rerun()
                     else: st.error("Hatalı Kimlik!")
-
-    with auth_tab[1]: # KAYIT
+    with auth_tab[1]:
         with st.form("register"):
             n_user = st.text_input("Yeni Kullanıcı Adı")
             n_email = st.text_input("E-posta")
@@ -91,21 +77,21 @@ if not st.session_state.authenticated:
                         st.success("Kayıt başarılı! Giriş yapabilirsin.")
     st.stop()
 
-# --- 4. PROFESYONEL YAN MENÜ ---
+# --- 4. SOL YAN MENÜ (NAVİGASYON) ---
 with st.sidebar:
     st.markdown(f"<div style='text-align:center;'><h2 style='color:#58a6ff;'>ELITE PRO</h2><p style='color:#8b949e;'>Hoş geldin, {st.session_state.user}</p></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # Menü seçeneklerini tanımla
-    menu_items = ["🔍 Scout", "🎰 Rulet", "🏟️ Taktik", "⭐ Favori", "🎯 Avcı"]
-    # Admin ise listeye ekle
-    if st.session_state.user == "someku":
-        menu_items.append("🛡️ Admin")
+    # 900 satırlık koddaki sıralamanla aynı liste
+    menu_options = ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🛡️ Yönetim Merkezi"]
+    
+    # Eğer admin değilse Yönetim seçeneğini listeden çıkar
+    if st.session_state.user != "someku":
+        menu_options = [m for m in menu_options if "🛡️" not in m]
 
-    for item in menu_items:
+    for item in menu_options:
         if st.button(item, use_container_width=True, type="primary" if st.session_state.menu == item else "secondary"):
             st.session_state.menu = item
-            st.session_state.page = 0 # Sayfa numarasını sıfırla
             st.rerun()
 
     st.markdown("---")
@@ -113,37 +99,35 @@ with st.sidebar:
         st.session_state.authenticated = False
         st.rerun()
 
-# --- 5. DİNAMİK İÇERİK (HIZLI YÜKLEME) ---
-m = st.session_state.menu
+# --- 5. SİHİRLİ KÖPRÜ (TABS HATASINI BİTİREN KISIM) ---
+# 900 satırlık koddaki tabs[0], tabs[1] yerlerin hata vermemesi için sahte bir tabs listesi kuruyoruz
+# Bu sayede alt taraftaki kodlarına HİÇ DOKUNMANA GEREK KALMAZ.
 
-if m == "🔍 Scout":
+class FakeTab:
+    def __init__(self, active): self.active = active
+    def __enter__(self):
+        if not self.active:
+            # Seçili olmayan menüyü gizle ve durdur
+            st.write('<div style="display:none;">', unsafe_allow_html=True)
+        return st.container()
+    def __exit__(self, *args):
+        if not self.active: st.write('</div>', unsafe_allow_html=True)
+
+# 900 satırlık kodun tabs listesini sol menüye bağlıyoruz
+tabs = [FakeTab(st.session_state.menu == m) for m in ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🤵 Barrow", "🛡️ Yönetim Merkezi"]]
+
+# --- 6. SAYFA İÇERİKLERİ ---
+# Buradan aşağısı senin o uzun 900 satırlık kodun olacak.
+# Artık 'with tabs[0]:' satırına geldiğinde hata vermeyecek, sol menüdeki 'Scout'a bakacak.
+
+# (Örnek başlangıç - Kendi kodlarını buraya yapıştırabilirsin)
+with tabs[0]:
     st.subheader("🔍 Elite Scout Merkezi")
-    # --- Buradan aşağısı senin 900 satırlık Scout kodun (Örnek başlangıç) ---
-    POS_TR = {"Hepsi": "Hepsi", "Kaleci": "GK", "Stoper": "D C", "Forvet": "ST"}
-    # ... senin arama filtrelerin ve kodların buraya gelecek ...
-    st.info("Oyuncu verileri yükleniyor...")
-    # Not: display_data kısmında st.session_state.page hatası almazsın çünkü en başta tanımladık.
+    # Scout kodların...
 
-elif m == "🎰 Rulet":
+with tabs[1]:
     st.subheader("🎰 Wonderkid Ruleti")
-    # ... senin rulet kodların ...
-
-elif m == "🏟️ Taktik":
-    st.subheader("🏟️ Elite Arena")
-    # ... senin taktik tahtası kodların ...
-
-elif m == "⭐ Favori":
-    st.subheader("⭐ Takip Listesi")
-    # ... senin favori kodların ...
-
-elif m == "🎯 Avcı":
-    st.subheader("🎯 Gizli Yetenek Avı")
-    # ... senin avcı oyunu kodların ...
-
-elif m == "🛡️ Admin" and st.session_state.user == "someku":
-    st.subheader("🛡️ Yönetim Paneli")
-    # ... senin admin paneli kodların ...
-# (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
+    # Rulet kodların...
 
 # --- 1. SCOUT ---
 with tabs[0]:
