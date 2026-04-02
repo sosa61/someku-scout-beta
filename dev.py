@@ -231,92 +231,93 @@ with tabs[0]:
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
 
-# --- 2. RULET (V800 - 3D ULTIMATE WALKOUT) ---
+# --- 2. RULET (V850 - 3D ULTIMATE WALKOUT - FINAL FIX) ---
 with tabs[1]:
-    # 💎 CSS: 3D KART, YILDIZ EFEKTLERİ VE 3D FİGÜR
+    # 💎 ULTRA CSS: 3D KART VE FIFA PAKET ANİMASYONU
     st.markdown("""
         <style>
-        @keyframes walkout-3d { 0% { transform: scale(0.2) rotateY(90deg); opacity: 0; } 100% { transform: scale(1) rotateY(0deg); opacity: 1; } }
-        @keyframes star-burst { 0% { text-shadow: 0 0 0px #fff; } 50% { text-shadow: 0 0 20px #f2cc60, 0 0 40px #f2cc60; } 100% { text-shadow: 0 0 0px #fff; } }
+        @keyframes walkout-fx { 0% { transform: scale(0) rotateY(180deg); opacity: 0; } 100% { transform: scale(1) rotateY(0deg); opacity: 1; } }
+        @keyframes neon-glow { 0% { box-shadow: 0 0 10px #f2cc60; } 50% { box-shadow: 0 0 40px #f2cc60; } 100% { box-shadow: 0 0 10px #f2cc60; } }
         
-        .fut-3d-container { perspective: 1000px; text-align: center; margin-top: 30px; }
+        .fut-container { perspective: 1200px; text-align: center; padding: 20px; }
         .fut-3d-card {
-            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+            background: linear-gradient(145deg, #1a1a1a 0%, #000 100%);
             border: 3px solid #f2cc60; border-radius: 20px;
             width: 320px; padding: 25px; margin: 0 auto;
-            transform-style: preserve-3d; animation: walkout-3d 1s ease-out;
-            box-shadow: 0 0 50px rgba(242, 204, 96, 0.3);
-            transition: transform 0.5s;
+            transform-style: preserve-3d; animation: walkout-fx 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative; animation: neon-glow 3s infinite;
         }
-        .fut-3d-card:hover { transform: rotateY(10deg) rotateX(5deg); }
         
-        /* 3D ELITE FIGURE */
-        .elite-3d-figure {
-            width: 150px; height: 150px; margin: 0 auto 20px;
-            background: radial-gradient(circle, #333 0%, #111 100%);
+        .elite-3d-icon {
+            width: 140px; height: 140px; margin: 0 auto 15px;
+            background: radial-gradient(circle, #333 0%, #000 100%);
             border: 4px solid #f2cc60; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 80px; box-shadow: inset 0 0 30px #f2cc60;
+            display: flex; align-items: center; justify-content: center; font-size: 70px;
         }
         
-        .pa-badge-3d {
-            background: #f2cc60; color: #000; width: 70px; height: 70px;
-            border-radius: 50%; line-height: 70px; font-weight: 900;
-            font-size: 28px; margin: -55px auto 20px; position: relative; z-index: 10;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        .pa-circle-top {
+            background: #f2cc60; color: #000; width: 65px; height: 65px;
+            border-radius: 50%; line-height: 65px; font-weight: 900;
+            font-size: 24px; margin: -50px auto 15px; position: relative; z-index: 5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         
-        .star-container { color: #f2cc60; font-size: 20px; margin-bottom: 10px; animation: star-burst 2s infinite; }
-        
-        .info-grid-3d {
+        .fut-info-box {
             display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-            text-align: left; font-size: 13px; color: #bbb;
+            text-align: left; font-size: 13px; color: #ccc;
             border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;
         }
+        .star-fx { color: #f2cc60; font-size: 20px; margin-bottom: 5px; }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🧧 ELITE 3D WALKOUT</h2><p style="color:#8b949e;">Potansiyele Duyarlı Yıldız Sistemi</p></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 ULTIMATE PACK OPENING</h2><p style="color:#8b949e;">Maks 21 Yaş | PA 130-200 | Maks 20M €</p></div>', unsafe_allow_html=True)
     
     import random, json, time, urllib.parse, datetime
 
     curr_user = st.session_state.get('user')
 
-    # --- 🎲 PARA SORUNU ÇÖZÜLMÜŞ HAVUZ ---
+    # --- 🎲 HAVUZU ZORLA ÇEK (PARA & YAŞ FİLTRESİ) ---
     try:
+        # Veritabanındaki tüm oyuncuları çekip Python ile akıllıca eliyoruz
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
         
-        def price_fix(p):
+        def smart_filter(p):
             try:
-                # Sayı olmayan her şeyi temizle, sadece rakamları al
-                d_raw = "".join(filter(str.isdigit, str(p.get('deger', '0'))))
-                # Eğer değer çok büyükse (örneğin 11.000.000), milyon bazına çek
-                val = float(d_raw)
+                # Fiyatı temizle (Sadece rakamları al)
+                raw_p = "".join(filter(str.isdigit, str(p.get('deger', '0'))))
+                val = float(raw_p)
+                # Eğer değer 11.000.000 gibi geliyorsa milyona böl
                 if val > 1000: val = val / 1000000
-                return val <= 20
-            except: return True 
+                return val <= 20 # 20M Euro Sınırı
+            except: return True # Hata olsa bile mermidir, gelsin.
 
-        full_pool = [p for p in res.data if price_fix(p)]
+        full_pool = [p for p in res.data if smart_filter(p)]
     except:
         full_pool = []
 
-    # --- 🎰 3D PAKET AÇILIŞI ---
+    # --- 🎰 ANALİZ VE WALKOUT ---
     if full_pool:
-        if st.button("🧧 3D PAKETİ AÇ (WALKOUT)", key="btn_fut_3d", use_container_width=True):
-            winner = random.choice(full_pool)
-            st.session_state.rulet_winner = winner
+        if st.button("🧧 PAKETİ AÇ (WALKOUT BEKLENİYOR)", key="btn_walkout_v850", use_container_width=True):
+            st.session_state.rulet_winner = random.choice(full_pool)
             st.session_state.animasyon_tamam = False
             
-            # Walkout Animasyonu
-            with st.empty():
-                for i in range(3):
-                    st.markdown(f"<h1 style='text-align:center; color:#f2cc60; animation: star-burst 0.5s infinite;'>⭐ ANALİZ EDİLİYOR {'.'*(i+1)}</h1>", unsafe_allow_html=True)
-                    time.sleep(0.6)
+            # FIFA Walkout Animasyonu (Yıldız patlamasıyla)
+            placeholder = st.empty()
+            for i in range(3):
+                placeholder.markdown(f"""
+                    <div style="text-align:center; padding:60px; background:#000; border:2px solid #f2cc60; border-radius:20px;">
+                        <h1 style="color:#f2cc60; text-shadow:0 0 20px #f2cc60;">⭐ {'WALKOUT' if i==2 else 'ANALİZ'} {'⭐'*(i+1)}</h1>
+                        <p style="color:white; font-family:monospace;">SİSTEME SIZILIYOR...</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                time.sleep(0.7)
+            placeholder.empty()
             
             st.session_state.animasyon_tamam = True
             st.rerun()
     else:
-        st.error("⚠️ Veritabanı bağlantısı kurulamadı.")
+        st.error("⚠️ Veritabanı bağlantısı kurulamadı veya kriterlere uygun oyuncu bulunamadı.")
 
     # --- 🏆 3D ELITE KART GÖSTERİMİ ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
@@ -324,29 +325,25 @@ with tabs[1]:
         p_name = p['oyuncu_adi']
         pa_val = int(p.get('pa', 0))
         
-        # Yıldız Sayısı Belirleme (PA ne kadar yüksekse o kadar yıldız)
-        if pa_val >= 180: stars = "⭐⭐⭐⭐⭐"
-        elif pa_val >= 165: stars = "⭐⭐⭐⭐"
-        elif pa_val >= 150: stars = "⭐⭐⭐"
-        else: stars = "⭐⭐"
+        # Yıldız Sayısı (Potansiyele Duyarlı)
+        stars = "⭐⭐⭐⭐⭐" if pa_val >= 180 else ("⭐⭐⭐⭐" if pa_val >= 165 else ("⭐⭐⭐" if pa_val >= 150 else "⭐⭐"))
 
         # Mevkiye göre 3D Figür
         m = p.get('mevki','').upper()
-        if "GK" in m: fig = "🧤"
-        elif any(x in m for x in ["DC","DL","DR"]): fig = "🛡️"
-        else: fig = "🎯"
-
+        fig = "🧤" if "GK" in m else ("🛡️" if any(x in m for x in ["DC","DL","DR"]) else "🎯")
+        
+        # Temiz Bilgi Tablosu
         st.markdown(f"""
-        <div class="fut-3d-container">
+        <div class="fut-container">
             <div class="fut-3d-card">
-                <div class="star-container">{stars}</div>
-                <div class="elite-3d-figure">{fig}</div>
-                <div class="pa-badge-3d">{pa_val}</div>
+                <div class="star-fx">{stars}</div>
+                <div class="elite-3d-icon">{fig}</div>
+                <div class="pa-circle-top">{pa_val}</div>
                 
-                <h2 style="margin:0; color:#f2cc60; text-transform:uppercase; letter-spacing:1px;">{p_name}</h2>
+                <h2 style="margin:0; color:#f2cc60; text-transform:uppercase;">{p_name}</h2>
                 <div style="color:#00ff41; font-weight:bold; font-size:20px; margin-top:5px;">💰 {p.get('deger','-')}</div>
                 
-                <div class="info-grid-3d">
+                <div class="fut-info-box">
                     <div>🌍 <b>ÜLKE:</b><br>{p.get('ulke','-')}</div>
                     <div>🏟️ <b>KULÜP:</b><br>{p.get('kulup','-')}</div>
                     <div>👟 <b>MEVKİ:</b><br>{p.get('mevki','-')}</div>
@@ -355,20 +352,21 @@ with tabs[1]:
                 
                 <a href="https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p_name)}" 
                    target="_blank" style="text-decoration:none; background:#58a6ff; color:white; padding:12px; border-radius:10px; display:inline-block; margin-top:20px; width:100%; font-weight:bold;">
-                   PROFILI İNCELE ➔
+                   TRANSFERMARKT PROFİLİ ➔
                 </a>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Favori Butonu
-        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key=f"fav_3d_{pa_val}"):
+        # Favori Butonu (Benzersiz Key)
+        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key=f"fav_fut_{random.randint(1,999)}"):
             supabase.table("favoriler").insert({
                 "oyuncu_adi": p_name, "kulup": p.get('kulup','-'), 
                 "pa": pa_val, "mevki": p.get('mevki','-'), "kullanici_adi": curr_user
             }).execute()
-            st.toast(f"{p_name} kulübe eklendi!")
-            
+            st.toast("Oyuncu kulübe katıldı!")
+
+
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
     st.markdown('<h2 style="text-align:center;">🏟️ ELITE ARENA - TAKTİK TAHTASI</h2>', unsafe_allow_html=True)
