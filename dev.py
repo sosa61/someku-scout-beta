@@ -336,7 +336,7 @@ with tabs[1]:
         """, unsafe_allow_html=True)
         if st.button("⭐ FAVORİLERE EKLE", use_container_width=True):
             supabase.table("favoriler").insert({"oyuncu_adi": p['oyuncu_adi'], "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
-            st.toast("Listeye eklendi!")
+            st.toast("Mermi listeye eklendi!")
 
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
