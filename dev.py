@@ -3,15 +3,16 @@ from supabase import create_client, Client
 import urllib.parse
 import pandas as pd
 import random
-import json
 import time
 import re
+import json
 import streamlit.components.v1 as components
 import unicodedata
 
-# --- 1. SİSTEM VE SAYFA AYARLARI ---
+# --- 1. SİSTEM AYARLARI (EN ÜSTTE) ---
 st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="💎")
 
+# Kasa Anahtarları (Supabase)
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
 
@@ -19,16 +20,15 @@ if 'supabase' not in st.session_state:
     st.session_state.supabase = create_client(URL, KEY)
 supabase = st.session_state.supabase
 
-# KRİTİK HATA ENGELLEYİCİ: Tüm session değişkenlerini sigortalıyoruz
+# Oturum kutularını tanımla (Hata Engelleyici)
 FOR_KEYS = {
     'authenticated': False, 
     'user': None, 
     'is_vip': False, 
-    'menu': "🔍 Scout Merkezi", 
+    'menu': "🔍 Scout", 
     'page': 0, 
     'fav_list': [],
-    'rulet_winner': None,
-    'animasyon_tamam': False
+    'show_intro': True # Giriş animasyonunu kontrol eder
 }
 for key, val in FOR_KEYS.items():
     if key not in st.session_state: st.session_state[key] = val
@@ -38,32 +38,41 @@ st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #e6edf3; }
     [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
+    
+    /* Premium Butonlar */
     div.stButton > button {
         background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
         color: white !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important;
+        transition: 0.3s;
     }
+    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4); }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 3. GİRİŞ VE KAYIT SİSTEMİ ---
 if not st.session_state.authenticated:
     st.markdown('<h1 style="text-align:center; color:#58a6ff;">💎 SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
+    
     auth_tab = st.tabs(["Giriş Yap", "Kayıt Ol"])
-    with auth_tab[0]:
+    
+    with auth_tab[0]: # GİRİŞ
         with st.form("login"):
             u_id = st.text_input("Kullanıcı Adı")
             u_pw = st.text_input("Şifre", type="password")
             if st.form_submit_button("SİSTEME BAĞLAN", use_container_width=True):
                 if u_id == "someku" and u_pw == "28616128Ok":
-                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True})
+                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True, "show_intro": True})
                     st.rerun()
                 else:
-                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                    if res.data:
-                        st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False))})
-                        st.rerun()
-                    else: st.error("Hatalı Kimlik!")
-    with auth_tab[1]:
+                    try:
+                        res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                        if res.data:
+                            st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False)), "show_intro": True})
+                            st.rerun()
+                        else: st.error("❌ Hatalı Kimlik!")
+                    except: st.error("⚠️ Sunucu bağlantı hatası.")
+
+    with auth_tab[1]: # KAYIT
         with st.form("register"):
             n_user = st.text_input("Yeni Kullanıcı Adı")
             n_email = st.text_input("E-posta")
@@ -71,63 +80,88 @@ if not st.session_state.authenticated:
             if st.form_submit_button("HESAP OLUŞTUR", use_container_width=True):
                 if n_user and n_email and n_pw:
                     check = supabase.table("users").select("*").eq("username", n_user).execute()
-                    if check.data: st.error("Bu isim alınmış!")
+                    if check.data: st.error("❌ Bu isim alınmış!")
                     else:
                         supabase.table("users").insert({"username": n_user, "email": n_email, "password": n_pw, "is_vip": False, "puan": 0}).execute()
-                        st.success("Kayıt başarılı! Giriş yapabilirsin.")
+                        st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
     st.stop()
 
-# --- 4. SOL YAN MENÜ (NAVİGASYON) ---
+# --- 4. GİRİŞ VİDEO ANİMASYONU (4 SANİYE) ---
+if st.session_state.show_intro:
+    intro_html = f"""
+    <div id="intro" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0d1117; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; font-family:'Inter', sans-serif;">
+        <video autoplay muted playsinline style="width:200px; height:200px;">
+            <source src="https://icons8.com/animated-icons/formats/mp4/detective/512" type="video/mp4">
+        </video>
+        <h1 style="color:#58a6ff; margin-top:20px; font-size:40px; text-shadow: 0 0 15px rgba(88,166,255,0.5);">SOMEKU ELITE PRO</h1>
+        <p style="color:#8b949e; font-size:18px;">🕵️‍♂️ Hoş geldin, {st.session_state.user}. Sistem yükleniyor...</p>
+    </div>
+    <script>
+        setTimeout(function(){{
+            document.getElementById('intro').style.display = 'none';
+        }}, 4000);
+    </script>
+    """
+    components.html(intro_html, height=1000) # HTML2 canvas kullanmadan direkt video/mp4 ile yapıldı
+    time.sleep(4.2) # Streamlit'in arkada beklemesi için
+    st.session_state.show_intro = False # Bir daha gösterme
+    st.rerun() # Gerçek Scout sayfasına geç
+
+# --- 5. PROFESYONEL YAN MENÜ ---
 with st.sidebar:
     st.markdown(f"<div style='text-align:center;'><h2 style='color:#58a6ff;'>ELITE PRO</h2><p style='color:#8b949e;'>Hoş geldin, {st.session_state.user}</p></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # 900 satırlık koddaki sıralamanla aynı liste
-    menu_options = ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🛡️ Yönetim Merkezi"]
+    # Menü seçeneklerini senin 900 satırlık kodunla tam uyumlu yapıyoruz
+    menu_options = {
+        "🔍 Scout Merkezi": "tabs[0]",
+        "🎰 Wonderkid Ruleti": "tabs[1]",
+        "🏟️ Taktik Tahtası": "tabs[2]",
+        "⭐ Favorilerim": "tabs[3]",
+        "🎯 Avcı Modu": "tabs[4]",
+        "🛡️ Yönetim": "tabs[6]"
+    }
     
     # Eğer admin değilse Yönetim seçeneğini listeden çıkar
     if st.session_state.user != "someku":
-        menu_options = [m for m in menu_options if "🛡️" not in m]
+        if "🛡️ Yönetim" in menu_options: del menu_options["🛡️ Yönetim"]
 
-    for item in menu_options:
+    for item, tab_key in menu_options.items():
         if st.button(item, use_container_width=True, type="primary" if st.session_state.menu == item else "secondary"):
             st.session_state.menu = item
+            st.session_state.page = 0 # Sayfayı sıfırla
             st.rerun()
 
     st.markdown("---")
     if st.button("🚪 Güvenli Çıkış", use_container_width=True):
         st.session_state.authenticated = False
+        st.session_state.show_intro = True # Çıkınca animasyonu sıfırla
         st.rerun()
 
-# --- 5. SİHİRLİ KÖPRÜ (TABS HATASINI BİTİREN KISIM) ---
-# 900 satırlık koddaki tabs[0], tabs[1] yerlerin hata vermemesi için sahte bir tabs listesi kuruyoruz
-# Bu sayede alt taraftaki kodlarına HİÇ DOKUNMANA GEREK KALMAZ.
+# --- 6. DİNAMİK İÇERİK (SADECE SEÇİLEN SAYFA) ---
+m = st.session_state.menu
 
+# Hata ve Donma Engelleyici: Sahte tabs nesneleri oluşturuyoruz
+# Bu sayede alt taraftaki with tabs[0] kodların hata vermez ama sadece seçili menü çalışır.
 class FakeTab:
-    def __init__(self, active): self.active = active
+    def __init__(self, is_active): self.is_active = is_active
     def __enter__(self):
-        if not self.active:
-            # Seçili olmayan menüyü gizle ve durdur
-            st.write('<div style="display:none;">', unsafe_allow_html=True)
+        if not self.is_active:
+            st.stop() # Seçili değilse kodun geri kalanını ASLA okuma (Donmayı engelleyen kısım)
         return st.container()
-    def __exit__(self, *args):
-        if not self.active: st.write('</div>', unsafe_allow_html=True)
+    def __exit__(self, *args): pass
 
-# 900 satırlık kodun tabs listesini sol menüye bağlıyoruz
-tabs = [FakeTab(st.session_state.menu == m) for m in ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🤵 Barrow", "🛡️ Yönetim Merkezi"]]
+# 900 satırlık kodun hata vermemesi için 'tabs' listesini kuruyoruz
+# Sidebar'daki menu_options sırasıyla tabs[0], tabs[1] vb. eşleşir.
+tabs = []
+options_list = list(menu_options.keys())
+for item in options_list:
+    tabs.append(FakeTab(m == item))
 
-# --- 6. SAYFA İÇERİKLERİ ---
-# Buradan aşağısı senin o uzun 900 satırlık kodun olacak.
-# Artık 'with tabs[0]:' satırına geldiğinde hata vermeyecek, sol menüdeki 'Scout'a bakacak.
-
-# (Örnek başlangıç - Kendi kodlarını buraya yapıştırabilirsin)
-with tabs[0]:
-    st.subheader("🔍 Elite Scout Merkezi")
-    # Scout kodların...
-
-with tabs[1]:
-    st.subheader("🎰 Wonderkid Ruleti")
-    # Rulet kodların...
+# --- 7. SAYFA İÇERİKLERİ ---
+# Buradan aşağıda senin 900 satırlık kodun başlıyor.
+# 'with tabs[0]:' satırına geldiğinde, eğer '🔍 Scout Merkezi' seçili değilse 
+# 'st.stop()' sayesinde o bloğun geri kalanı hiç okunmayacak ve site kasmayacak.
 
 # --- 1. SCOUT ---
 with tabs[0]:
