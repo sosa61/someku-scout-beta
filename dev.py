@@ -229,7 +229,7 @@ with tabs[0]:
         if c1.button("⬅️ Geri", use_container_width=True) and st.session_state.page > 0: st.session_state.page -= 1; st.rerun()
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
-# --- 2. RULET (V2000 - 3D UCL ENGINE & AUTO RE-SPIN) ---
+# --- 2. RULET (V2000 - 3D UCL ENGINE & RESET ANIMATION) ---
 with tabs[1]:
     import random, time, urllib.parse
 
@@ -264,7 +264,6 @@ with tabs[1]:
         .open-r { animation: packR 1.2s forwards 0.2s; }
         
         .pack-content { padding: 40px 20px; text-align: center; }
-        
         .pa-sphere-3d {
             width: 100px; height: 100px; border-radius: 50%; 
             background: linear-gradient(135deg, #ffffff 0%, #3c5999 100%);
@@ -273,10 +272,8 @@ with tabs[1]:
             border: 4px solid #fff; box-shadow: 0 0 30px rgba(255,255,255,0.4);
             transform: translateZ(30px);
         }
-        
         .p-name { color: #fff; font-size: 26px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .p-price { font-size: 24px; color: #ffffff; font-weight: 900; margin-bottom: 20px; display: block; }
-        
         .stat-grid-ucl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; transform: translateZ(20px); }
         .stat-box-ucl { 
             background: rgba(60, 89, 153, 0.25); padding: 12px 8px; border-radius: 15px; 
@@ -284,7 +281,6 @@ with tabs[1]:
         }
         .stat-l { font-size: 10px; color: #a5b4fc; text-transform: uppercase; font-weight: 800; display: block; }
         .stat-v { font-size: 14px; color: #fff; font-weight: bold; display: block; margin-top: 3px; }
-        
         .p-btn-tm {
             background: #fff; color: #101935 !important; 
             text-decoration: none !important; padding: 15px; border-radius: 15px; 
@@ -325,12 +321,15 @@ with tabs[1]:
             if st.button("🏆 CHAMPIONS PACK AÇ", key="v20_main_btn", use_container_width=True):
                 st.session_state.rulet_winner = random.choice(pool)
                 st.session_state.animasyon_tamam = False
-                st.markdown('<div class="stage-3d"><div class="pack-frame-3d" style="height:620px;"><div class="pack-gate"><div class="pack-side">★</div><div class="pack-side">★</div></div></div></div>', unsafe_allow_html=True)
-                time.sleep(0.1)
+                
+                # Yükleme / Walkout Efekti
+                with st.spinner("★ CHAMPIONS LEAGUE ANALİZİ ★"):
+                    time.sleep(1.2)
+                
                 st.session_state.animasyon_tamam = True
                 st.rerun()
     
-    # 🏆 GÖSTERİM & OTOMATİK TEKRAR
+    # 🏆 GÖSTERİM & TEKRAR ÇEVİRME
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         name = str(p.get('oyuncu_adi', '-')).upper()
@@ -341,7 +340,7 @@ with tabs[1]:
         age = str(p.get('yas', '-'))
         val = str(p.get('deger', '-'))
         
-        pos_tr = mevki_tr_map.get(raw_pos, raw_pos) # Türkçe Mevki
+        pos_tr = mevki_tr_map.get(raw_pos, raw_pos)
         star_count = 5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2))
         stars = "★" * star_count
         tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(name)}"
@@ -377,9 +376,9 @@ with tabs[1]:
                 st.toast("Mermi kulübe katıldı!")
         with col2:
             if st.button("🔄 YENİ PAKET AÇ", key="v20_retry", use_container_width=True):
-                # ESKİ KAZANANI SİL VE YENİSİNİ ANINDA ÇEK (OTOMATİK BAŞLATIR)
-                st.session_state.rulet_winner = random.choice(pool)
-                st.session_state.animasyon_tamam = True
+                # RESETLE VE ANİMASYONU TEKRAR TETİKLE
+                st.session_state.rulet_winner = None
+                st.session_state.animasyon_tamam = False
                 st.rerun()
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
