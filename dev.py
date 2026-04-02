@@ -670,7 +670,7 @@ with tabs[6]:  # Barrow AI'dan sonraki sekme olarak düşün
                             "kullanici": st.session_state.user,
                             "mesaj": oneri_mesaj
                         }).execute()
-                        st.success("Mermi yola çıktı patron! En kısa sürede inceleyeceğiz.")
+                        st.success("Önerin yola çıktı! En kısa sürede inceleyeceğiz.")
                     except Exception as e:
                         st.error(f"Gönderim hatası: {e}")
                 else:
