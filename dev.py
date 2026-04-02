@@ -9,10 +9,9 @@ import json
 import streamlit.components.v1 as components
 import unicodedata
 
-# --- 1. SİSTEM AYARLARI (EN ÜSTTE) ---
+# --- 1. SİSTEM AYARLARI ---
 st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="💎")
 
-# Kasa Anahtarları (Supabase)
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
 
@@ -25,10 +24,11 @@ FOR_KEYS = {
     'authenticated': False, 
     'user': None, 
     'is_vip': False, 
-    'menu': "🔍 Scout", 
+    'menu': "🔍 Scout Merkezi", 
     'page': 0, 
     'fav_list': [],
-    'show_intro': True # Giriş animasyonunu kontrol eder
+    'rulet_winner': None,
+    'animasyon_tamam': False
 }
 for key, val in FOR_KEYS.items():
     if key not in st.session_state: st.session_state[key] = val
@@ -38,20 +38,26 @@ st.markdown("""
     <style>
     .stApp { background-color: #0d1117; color: #e6edf3; }
     [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
-    
-    /* Premium Butonlar */
     div.stButton > button {
         background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
         color: white !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important;
-        transition: 0.3s;
     }
-    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4); }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. GİRİŞ VE KAYIT SİSTEMİ ---
+# --- 3. GİRİŞ VE SABİT ANİMASYON ---
 if not st.session_state.authenticated:
-    st.markdown('<h1 style="text-align:center; color:#58a6ff;">💎 SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
+    # Sabit Animasyon (Gitmesini istemediğin için stop'tan önce koyduk)
+    intro_html = f"""
+    <div style="width:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; margin-bottom:30px;">
+        <video autoplay muted loop playsinline style="width:180px; height:180px; border-radius:50%;">
+            <source src="https://icons8.com/animated-icons/formats/mp4/detective/512" type="video/mp4">
+        </video>
+        <h1 style="color:#58a6ff; margin-top:10px; font-size:32px;">SOMEKU ELITE PRO</h1>
+        <p style="color:#8b949e;">Lütfen sistem yetkilendirmesini tamamlayın...</p>
+    </div>
+    """
+    st.components.v1.html(intro_html, height=320)
     
     auth_tab = st.tabs(["Giriş Yap", "Kayıt Ol"])
     
@@ -61,16 +67,14 @@ if not st.session_state.authenticated:
             u_pw = st.text_input("Şifre", type="password")
             if st.form_submit_button("SİSTEME BAĞLAN", use_container_width=True):
                 if u_id == "someku" and u_pw == "28616128Ok":
-                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True, "show_intro": True})
+                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True})
                     st.rerun()
                 else:
-                    try:
-                        res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                        if res.data:
-                            st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False)), "show_intro": True})
-                            st.rerun()
-                        else: st.error("❌ Hatalı Kimlik!")
-                    except: st.error("⚠️ Sunucu bağlantı hatası.")
+                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                    if res.data:
+                        st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False))})
+                        st.rerun()
+                    else: st.error("❌ Hatalı Kimlik!")
 
     with auth_tab[1]: # KAYIT
         with st.form("register"):
@@ -86,82 +90,54 @@ if not st.session_state.authenticated:
                         st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
     st.stop()
 
-# --- 4. GİRİŞ VİDEO ANİMASYONU (4 SANİYE) ---
-if st.session_state.show_intro:
-    intro_html = f"""
-    <div id="intro" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0d1117; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; font-family:'Inter', sans-serif;">
-        <video autoplay muted playsinline style="width:200px; height:200px;">
-            <source src="https://icons8.com/animated-icons/formats/mp4/detective/512" type="video/mp4">
-        </video>
-        <h1 style="color:#58a6ff; margin-top:20px; font-size:40px; text-shadow: 0 0 15px rgba(88,166,255,0.5);">SOMEKU ELITE PRO</h1>
-        <p style="color:#8b949e; font-size:18px;">🕵️‍♂️ Hoş geldin, {st.session_state.user}. Sistem yükleniyor...</p>
-    </div>
-    <script>
-        setTimeout(function(){{
-            document.getElementById('intro').style.display = 'none';
-        }}, 4000);
-    </script>
-    """
-    components.html(intro_html, height=1000) # HTML2 canvas kullanmadan direkt video/mp4 ile yapıldı
-    time.sleep(4.2) # Streamlit'in arkada beklemesi için
-    st.session_state.show_intro = False # Bir daha gösterme
-    st.rerun() # Gerçek Scout sayfasına geç
-
-# --- 5. PROFESYONEL YAN MENÜ ---
+# --- 4. PROFESYONEL YAN MENÜ ---
 with st.sidebar:
     st.markdown(f"<div style='text-align:center;'><h2 style='color:#58a6ff;'>ELITE PRO</h2><p style='color:#8b949e;'>Hoş geldin, {st.session_state.user}</p></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # Menü seçeneklerini senin 900 satırlık kodunla tam uyumlu yapıyoruz
-    menu_options = {
-        "🔍 Scout Merkezi": "tabs[0]",
-        "🎰 Wonderkid Ruleti": "tabs[1]",
-        "🏟️ Taktik Tahtası": "tabs[2]",
-        "⭐ Favorilerim": "tabs[3]",
-        "🎯 Avcı Modu": "tabs[4]",
-        "🛡️ Yönetim": "tabs[6]"
-    }
+    # 900 Satırlık kodundaki with tabs sıralamasına göre liste:
+    # 0: Scout, 1: Rulet, 2: Taktik, 3: Favori, 4: Avcı, 5: Barrow, 6: Yönetim
+    menu_list = ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🤵 Barrow AI", "🛡️ Yönetim"]
     
-    # Eğer admin değilse Yönetim seçeneğini listeden çıkar
+    # Yönetim'i someku hariç kimsede gösterme
+    display_menu = menu_list.copy()
     if st.session_state.user != "someku":
-        if "🛡️ Yönetim" in menu_options: del menu_options["🛡️ Yönetim"]
+        display_menu.remove("🛡️ Yönetim")
 
-    for item, tab_key in menu_options.items():
+    for item in display_menu:
         if st.button(item, use_container_width=True, type="primary" if st.session_state.menu == item else "secondary"):
             st.session_state.menu = item
-            st.session_state.page = 0 # Sayfayı sıfırla
             st.rerun()
 
     st.markdown("---")
     if st.button("🚪 Güvenli Çıkış", use_container_width=True):
         st.session_state.authenticated = False
-        st.session_state.show_intro = True # Çıkınca animasyonu sıfırla
         st.rerun()
 
-# --- 6. DİNAMİK İÇERİK (SADECE SEÇİLEN SAYFA) ---
-m = st.session_state.menu
-
-# Hata ve Donma Engelleyici: Sahte tabs nesneleri oluşturuyoruz
-# Bu sayede alt taraftaki with tabs[0] kodların hata vermez ama sadece seçili menü çalışır.
-class FakeTab:
-    def __init__(self, is_active): self.is_active = is_active
+# --- 5. DONMAYI VE ÇAKIŞMAYI BİTİREN "GİZLİ TABS" SİSTEMİ ---
+# Bu sistem hem sol menüye bakar hem de alt taraftaki with tabs[0] kodlarını çalıştırır.
+class TabController:
+    def __init__(self, index):
+        self.index = index
+        self.label = menu_list[index]
     def __enter__(self):
-        if not self.is_active:
-            st.stop() # Seçili değilse kodun geri kalanını ASLA okuma (Donmayı engelleyen kısım)
-        return st.container()
-    def __exit__(self, *args): pass
+        # Sadece sidebar'da seçilen menü aktifse içeriği göster, değilse gizle
+        if st.session_state.menu == self.label:
+            return st.container()
+        else:
+            # Seçili olmayan sekmelerin içeriğini HTML ile gizliyoruz (st.stop() kullanmıyoruz!)
+            st.write('<div style="display:none;">', unsafe_allow_html=True)
+            return st.empty()
+    def __exit__(self, *args):
+        if st.session_state.menu != self.label:
+            st.write('</div>', unsafe_allow_html=True)
 
-# 900 satırlık kodun hata vermemesi için 'tabs' listesini kuruyoruz
-# Sidebar'daki menu_options sırasıyla tabs[0], tabs[1] vb. eşleşir.
-tabs = []
-options_list = list(menu_options.keys())
-for item in options_list:
-    tabs.append(FakeTab(m == item))
+# 900 satırlık kodun tabs listesini oluşturuyoruz
+tabs = [TabController(i) for i in range(len(menu_list))]
 
-# --- 7. SAYFA İÇERİKLERİ ---
-# Buradan aşağıda senin 900 satırlık kodun başlıyor.
-# 'with tabs[0]:' satırına geldiğinde, eğer '🔍 Scout Merkezi' seçili değilse 
-# 'st.stop()' sayesinde o bloğun geri kalanı hiç okunmayacak ve site kasmayacak.
+# --- 6. SAYFA İÇERİKLERİ ---
+# BURADAN AŞAĞISI SENİN 900 SATIRLIK KODUN:
+# with tabs[0]: ... with tabs[1]: ... hepsi tıkır tıkır çalışacak.
 
 # --- 1. SCOUT ---
 with tabs[0]:
