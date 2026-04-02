@@ -7,15 +7,11 @@ import json
 import time
 import re
 import streamlit.components.v1 as components
-import matplotlib.pyplot as plt
-import datetime
-import os
-import subprocess
-import threading
 import unicodedata
+import datetime
 
 # --- 1. SİSTEM VE BAĞLANTI AYARLARI ---
-st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="💎")
+st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="🕵️")
 
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
@@ -25,154 +21,120 @@ try:
         st.session_state.supabase = create_client(URL, KEY)
     supabase = st.session_state.supabase
 except Exception as e:
-    st.error(f"Bağlantı kurulum hatası: {e}")
+    st.error(f"Bağlantı hatası: {e}")
 
-# --- 2. OTURUM GÜVENLİĞİ (HATA ENGELLEYİCİ) ---
-FOR_KEYS = {
-    'authenticated': False, 'user': None, 'is_vip': False, 
-    'menu': "🔍 Scout Merkezi", 'page': 0, 'fav_list': []
-}
+# Oturum Sigortası
+FOR_KEYS = {'authenticated': False, 'user': None, 'is_vip': False, 'page': 0, 'fav_list': []}
 for key, val in FOR_KEYS.items():
     if key not in st.session_state: st.session_state[key] = val
 
-# --- 3. MODERN PREMİUM UI (CSS) ---
+# --- 2. ZENGİN PEMBE-MOR UI (CSS) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #0d1117; color: #e6edf3; }
-    [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
+    /* Ana Arka Plan Gradiyenti (Attığın resimdeki gibi) */
+    .stApp { 
+        background: linear-gradient(135deg, #7928ca 0%, #ff0080 100%); 
+        color: white; 
+    }
     
-    /* Dashboard Kart Butonları */
+    /* 3D Figür Kutusu Tasarımı */
+    .figure-box {
+        background: #ff6600;
+        border: 4px solid #fff;
+        border-radius: 20px;
+        padding: 15px;
+        box-shadow: 15px 15px 30px rgba(0,0,0,0.4);
+        text-align: center;
+        transition: 0.3s;
+        margin-bottom: 20px;
+    }
+    .figure-box:hover { transform: translateY(-10px) rotate(2deg); }
+    .figure-img { width: 100%; border-radius: 12px; margin-bottom: 10px; border: 2px solid white; }
+    .figure-title { font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+    .figure-tag { background: white; color: #ff6600; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; display: inline-block; margin-top: 5px; }
+
+    /* Oluştur Butonu ve Giriş Butonları */
     div.stButton > button {
-        background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
-        color: white !important; border: none !important; border-radius: 12px !important; 
-        font-weight: 600 !important; height: 55px !important; transition: 0.3s !important;
+        background: linear-gradient(90deg, #facc15 0%, #eab308 100%) !important;
+        color: #000 !important; border: none !important; border-radius: 50px !important;
+        font-weight: 800 !important; height: 50px !important; transition: 0.3s !important;
     }
-    div.stButton > button:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(31, 111, 235, 0.4); }
-    
-    /* Video Alanı Tasarımı */
-    .video-container {
-        width: 100%; height: 320px; background: #161b22; 
-        border: 1px solid #30363d; border-radius: 20px;
-        display: flex; justify-content: center; align-items: center;
-        overflow: hidden; margin-bottom: 25px; position: relative;
-    }
+    div.stButton > button:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+
+    /* Sidebar Temizleme */
+    [data-testid="stSidebar"] { background-color: rgba(0,0,0,0.3) !important; border-right: 1px solid rgba(255,255,255,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. GİRİŞ VE KAYIT SİSTEMİ ---
+# --- 3. GİRİŞ VE FİGÜR OLUŞTURMA EKRANI ---
 if not st.session_state.authenticated:
-    st.markdown('<h1 style="text-align:center; color:#58a6ff; letter-spacing:2px; margin-top:50px;">🕵️ SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
-    auth_tab = st.tabs(["🔐 SİSTEME GİRİŞ", "📝 YENİ KAYIT"])
+    st.markdown('<h1 style="text-align:center; font-size:50px;">🕵️ SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
     
-    with auth_tab[0]:
-        with st.form("login_form"):
-            u_id = st.text_input("Kullanıcı Adı")
-            u_pw = st.text_input("Şifre", type="password")
-            if st.form_submit_button("ANALİZİ BAŞLAT", use_container_width=True):
-                if u_id == "someku" and u_pw == "28616128Ok":
-                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True})
-                    st.rerun()
-                else:
-                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                    if res.data:
-                        st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False))})
-                        st.rerun()
-                    else: st.error("❌ Kimlik doğrulanamadı!")
-
-    with auth_tab[1]:
-        with st.form("reg_form"):
-            n_user = st.text_input("Kullanıcı Adı")
-            n_email = st.text_input("E-posta")
-            n_pw = st.text_input("Şifre", type="password")
-            if st.form_submit_button("HESAP OLUŞTUR"):
-                if n_user and n_email and n_pw:
-                    check = supabase.table("users").select("*").eq("username", n_user).execute()
-                    if check.data: st.error("❌ Bu isim alınmış!")
-                    else:
-                        supabase.table("users").insert({"username": n_user, "email": n_email, "password": n_pw, "is_vip": False, "puan": 0}).execute()
-                        st.success("✅ Kayıt başarılı! Giriş sekmesine dönün.")
-    st.stop()
-
-# --- 5. ÜST VİDEO PANELİ (SABİT) ---
-st.markdown(f"""
-    <div class="video-container">
-        <video autoplay muted loop playsinline style="width:100%; opacity:0.4; object-fit:cover; position:absolute;">
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-business-analyst-working-with-data-on-a-tablet-41224-large.mp4" type="video/mp4">
-        </video>
-        <div style="position:relative; text-align:center;">
-            <h1 style="color:#58a6ff; font-size:45px; text-shadow: 0 0 20px rgba(88,166,255,0.5);">SOMEKU ELITE PRO</h1>
-            <p style="color:#fff; font-size:18px;">Hoş Geldin Analist, {st.session_state.user.upper()}</p>
+    st.markdown("""
+        <div style="text-align:center; margin-bottom:40px;">
+            <h2 style="color:white; font-size:42px; line-height:1.1; font-weight:900;">İstediğini yaz, algoritmamız<br>onu 3D kutuda teslim etsin!</h2>
         </div>
-    </div>
     """, unsafe_allow_html=True)
 
-# --- 6. HIZLI ERİŞİM VE SOL BAR NAVİGASYONU ---
-menu_list = ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🤵 Barrow AI", "🛡️ Yönetim"]
-if st.session_state.user != "someku": menu_list = [m for m in menu_list if "🛡️" not in m]
+    auth_col1, auth_col2 = st.columns([3, 1])
+    with auth_col1:
+        target_name = st.text_input("", placeholder="Hedef oyuncuyu yazın (Örn: Mbappe)", key="target_input", label_visibility="collapsed")
+    with auth_col2:
+        if st.button("OLUŞTUR", use_container_width=True):
+            st.warning("⚠️ Lütfen önce sistem anahtarınızı girin!")
 
-# ORTA PANEL BUTONLARI
-st.markdown("### 🚀 HIZLI ERİŞİM")
-q_cols = st.columns(len(menu_list))
-for i, item in enumerate(menu_list):
-    if q_cols[i].button(item, key=f"q_{i}", use_container_width=True):
-        st.session_state.menu = item
-        st.rerun()
+    # Şifre Paneli
+    with st.expander("🔑 SİSTEM ANAHTARINI GİRİN", expanded=True):
+        u_pw = st.text_input("Giriş Şifresi:", type="password", key="main_pw")
+        if st.button("SİSTEME ERİŞİM SAĞLA", use_container_width=True):
+            # Admin kontrolü
+            if target_name == "someku" and u_pw == "28616128Ok":
+                st.session_state.update({"authenticated": True, "user": target_name, "is_vip": True})
+                st.rerun()
+            else:
+                res = supabase.table("users").select("*").eq("username", target_name).eq("password", u_pw).execute()
+                if res.data:
+                    st.session_state.update({"authenticated": True, "user": target_name, "is_vip": bool(res.data[0].get("is_vip", False))})
+                    st.rerun()
+                else: st.error("❌ Geçersiz oyuncu veya anahtar!")
 
-# SOL YAN BAR
+    # Galeri Bölümü (Attığın resimdeki 3 figür)
+    st.markdown("<br><h3 style='text-align:center;'>🔥 SON TESLİM EDİLENLER</h3>", unsafe_allow_html=True)
+    g1, g2, g3 = st.columns(3)
+    
+    with g1:
+        st.markdown("""<div class="figure-box"><img src="https://img.prodirectsport.com/cdn-cgi/image/q=80,f=auto,width=480/vassets/61/88/15/158861_main.jpg" class="figure-img"><div class="figure-title">MBAPPE #7</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
+    with g2:
+        st.markdown("""<div class="figure-box"><img src="https://tmssl.akamaized.net/images/foto/galerie/fernando-muslera-galatasaray-1635848529-74315.jpg" class="figure-img"><div class="figure-title">MUSLERA #1</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
+    with g3:
+        st.markdown("""<div class="figure-box"><img src="https://pbs.twimg.com/media/F3XW9q_W8AAO2r9?format=jpg&name=large" class="figure-img"><div class="figure-title">ICARDI #9</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
+    
+    st.stop()
+
+# --- 4. ANA PANEL (NAVİGASYON) ---
 with st.sidebar:
-    st.markdown("<h2 style='text-align:center; color:#58a6ff;'>NAVİGASYON</h2>", unsafe_allow_html=True)
+    st.markdown(f"### 👤 {st.session_state.user.upper()}")
     st.markdown("---")
-    for item in menu_list:
-        if st.button(item, key=f"s_{item}", use_container_width=True, type="primary" if st.session_state.menu == item else "secondary"):
-            st.session_state.menu = item
-            st.rerun()
-    st.markdown("---")
-    if st.button("🚪 ÇIKIŞ YAP", use_container_width=True):
-        st.session_state.authenticated = False
+    menu = st.radio("SİSTEM MENÜSÜ", ["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
+    if st.button("🚪 SİSTEMDEN ÇIK"):
+        st.session_state.clear()
         st.rerun()
 
-# --- 7. İZOLASYON KÖPRÜSÜ (900 SATIRLIK KODUN ÇALIŞMASI İÇİN) ---
+# --- 5. TABS KÖPRÜSÜ (HATA GİDERİCİ) ---
+# Senin 900 satırlık kodundaki tabs[0], tabs[1] yapısını Sidebar'a bağlıyoruz
 class TabBridge:
-    def __init__(self, label):
-        self.label = label
+    def __init__(self, label): self.label = label
     def __enter__(self):
-        if st.session_state.menu == self.label: return st.container()
+        if menu == self.label: return st.container()
         else:
             st.write('<div style="display:none;">', unsafe_allow_html=True)
             return st.empty()
     def __exit__(self, *args):
-        if st.session_state.menu != self.label: st.write('</div>', unsafe_allow_html=True)
+        if menu != self.label: st.write('</div>', unsafe_allow_html=True)
 
-# Tabs listesini oluşturup senin 900 satırlık koduna bağlıyoruz
-tabs = [TabBridge(m) for m in ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🤵 Barrow AI", "🛡️ Yönetim"]]
+tabs = [TabBridge(m) for m in ["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"]]
 
-# --- 8. SAYFA İÇERİKLERİ (SENİN 900 SATIRLIK KODUN) ---
-
-# --- 1. SCOUT ---
-with tabs[0]:
-    if st.session_state.menu == "🔍 Scout Merkezi":
-        POS_TR = {"Hepsi": "Hepsi", "Kaleci": "GK", "Stoper": "D C", "Sol Bek": "D L", "Sağ Bek": "D R", "Ön Libero": "DM", "Merkez Orta Saha": "M C", "Sol Kanat": "AM L", "Sağ Kanat": "AM R", "Ofansif Orta Saha": "AM C", "Forvet": "ST"}
-        REG_TR = {"Hepsi": [], "Avrupa": ["Türkiye", "Almanya", "Fransa", "İngiltere", "İtalya", "İspanya", "Hollanda", "Portekiz", "Belçika", "Avusturya", "İsviçre"], "Kuzey Avrupa": ["Norveç", "İsveç", "Danimarka", "Finlandiya", "İzlanda"], "Balkanlar": ["Hırvatistan", "Sırbistan", "Yunanistan", "Bulgaristan", "Slovenya", "Bosna Hersek", "Romanya"], "Güney Amerika": ["Brezilya", "Arjantin", "Uruguay", "Kolombiya", "Ekvador", "Şili", "Paraguay"], "Afrika": ["Nijerya", "Senegal", "Mısır", "Fildişi Sahili", "Fas", "Cezayir", "Gana", "Kamerun"], "Asya": ["Japonya", "Güney Kore", "Suudi Arabistan", "Katar", "Avustralya", "Çin"]}
-        
-        # ... BURADAN SONRA SENİN TÜM KODLARINI (query, filtered_data, Transfermarkt linkleri vs.) YAPIŞTIRABİLİRSİN ...
-        # ... tabs[1], tabs[2] diye devam eden tüm blokları buraya ekle ...
-        st.info("İlgili modül aktif edildi.")
-
-# --- 2. RULET (Örnek Bağlantı) ---
-with tabs[1]:
-    if st.session_state.menu == "🎰 Wonderkid Ruleti":
-        st.markdown('<h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2>', unsafe_allow_html=True)
-        # Buraya senin orijinal Rulet kodlarını yapıştır...
-
-# --- 6. ADMIN (Örnek Bağlantı) ---
-with tabs[6]:
-    if st.session_state.user == "someku" and st.session_state.menu == "🛡️ Yönetim":
-        st.markdown('<h1 style="color:#ff4b4b; text-align:center;">🛡️ YÖNETİM MERKEZİ</h1>', unsafe_allow_html=True)
-        # Buraya senin orijinal Admin tablosu kodlarını yapıştır...
-
-
-
-
+# --- 6. İÇERİKLER (SENİN TÜM KODLARIN) ---
 
         # --- 1. SCOUT ---
 with tabs[0]:
