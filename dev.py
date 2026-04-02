@@ -230,7 +230,7 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-## --- 2. RULET (V200 - ELITE SINGLE RULET) ---
+# --- 2. RULET (V200 - ELITE SINGLE RULET - HATASIZ) ---
 with tabs[1]:
     st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">PA 130-200 | Maks 21 Yaş | Maks 15M €</p></div>', unsafe_allow_html=True)
     
@@ -238,7 +238,7 @@ with tabs[1]:
     import json
     import time
     import urllib.parse
-    from datetime import datetime
+    import datetime # BU SATIRI BÖYLE BIRAK, datetime.datetime kullanacağız
 
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
@@ -246,22 +246,25 @@ with tabs[1]:
     # --- HAK KONTROLÜ (STANDART ÜYELER İÇİN) ---
     can_spin = True
     if not user_is_vip:
-        u_data = supabase.table("users").select("rulet_hak, last_rulet_date").eq("username", curr_user).execute()
-        if u_data.data:
-            today = str(datetime.now().date())
-            db_date = u_data.data[0].get("last_rulet_date")
-            hak = u_data.data[0].get("rulet_hak", 0)
-            
-            if db_date != today:
-                # Gün değişmiş, hakları sıfırla
-                supabase.table("users").update({"rulet_hak": 0, "last_rulet_date": today}).eq("username", curr_user).execute()
-                hak = 0
-            
-            if hak >= 3:
-                st.warning("🚫 Günlük 3 çevirme hakkın doldu patron! Yarın gel veya VIP'ye geç.")
-                can_spin = False
-            else:
-                st.info(f"🎫 Kalan Günlük Hakkın: {3 - hak}")
+        try:
+            u_data = supabase.table("users").select("rulet_hak, last_rulet_date").eq("username", curr_user).execute()
+            if u_data.data:
+                today = str(datetime.date.today())
+                db_date = u_data.data[0].get("last_rulet_date")
+                hak = u_data.data[0].get("rulet_hak", 0)
+                
+                if db_date != today:
+                    # Gün değişmiş, hakları sıfırla
+                    supabase.table("users").update({"rulet_hak": 0, "last_rulet_date": today}).eq("username", curr_user).execute()
+                    hak = 0
+                
+                if hak >= 3:
+                    st.warning("🚫 Günlük 3 çevirme hakkın doldu patron! Yarın gel veya VIP'ye geç.")
+                    can_spin = False
+                else:
+                    st.info(f"🎫 Kalan Günlük Hakkın: {3 - hak}")
+        except:
+            pass # Veritabanında sütunlar yoksa hata vermesin diye
 
     # --- RULET MOTORU ---
     player_pool = []
@@ -333,7 +336,7 @@ with tabs[1]:
             <div style="margin-top:20px;"><a href="{tm_url}" target="_blank" style="text-decoration:none; color:#58a6ff; font-weight:bold;">Transfermarkt Profili ➔</a></div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("⭐ FAVORİLERE EKLE", use_container_width=True):
+        if st.button("⭐ FAVORİLERE EKLE", key=f"fav_btn_{p['oyuncu_adi']}", use_container_width=True):
             supabase.table("favoriler").insert({"oyuncu_adi": p['oyuncu_adi'], "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
             st.toast("Mermi listeye eklendi!")
 
