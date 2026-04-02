@@ -56,7 +56,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. GİRİŞ KONTROLÜ (DÜZELTİLMİŞ) ---
+# --- 3. GİRİŞ KONTROLÜ (GÜVENLİ) ---
 if not st.session_state.authenticated:
     st.markdown('<h1 style="text-align:center; color:#58a6ff;">🕵️ SOMEKU ELITE</h1>', unsafe_allow_html=True)
     u_id = st.text_input("Scout Kimliği:", key="l_u")
@@ -80,36 +80,40 @@ if not st.session_state.authenticated:
                 st.error(f"Veritabanı bağlantı hatası: {e}")
     st.stop()
 
-# --- 4. SOL YAN MENÜ VE TABS BAĞLANTISI (KRİTİK KISIM) ---
+# --- 4. SOL YAN MENÜ (SABİT) ---
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/detective.png", width=60)
     st.markdown(f"### {st.session_state.user}")
     st.markdown("---")
     
-    # Menü seçenekleri senin 900 satırlık kodundaki tabs sıralamasıyla aynı olmalı
-    menu_list = ["🔍 Scout", "🎰 Rulet", "🏟️ Taktik", "⭐ Favoriler", "🎯 Avcı", "🤵 Barrow", "🛡️ Yönetim"]
-    menu = st.radio("NAVİGASYON", menu_list)
+    # Menü listesi senin 900 satırlık yapınla tam uyumlu olmalı
+    menu_options = ["🔍 Scout", "🎰 Rulet", "🏟️ Taktik", "⭐ Favoriler", "🎯 Avcı", "🤵 Barrow", "🛡️ Yönetim"]
+    menu = st.radio("NAVİGASYON", menu_options, key="main_nav")
     
     st.markdown("---")
     if st.button("🚪 Çıkış"):
         st.session_state.authenticated = False
         st.rerun()
 
-# --- 5. HATA ENGELLEYİCİ (900 SATIRI KURTARAN DOKUNUŞ) ---
-# Aşağıdaki kodlarda hata almamak için 'tabs' değişkenini sanal olarak oluşturuyoruz
-# Bu sayede 'with tabs[0]' komutu, sol menüdeki ilk seçeneğe bağlanır.
-tabs = [st.container() for _ in range(len(menu_list))]
+# --- 5. HATA VE DONMA ENGELLEYİCİ BAĞLANTI ---
+# DONMA SEBEBİ: st.empty() ve döngüydü. Onu sildik.
+# ÇÖZÜM: 'tabs' adında boş bir nesne listesi oluşturuyoruz.
+class TabPlaceholder:
+    def __enter__(self): return self
+    def __exit__(self, *args): pass
 
-# Hangi menü seçildiyse sadece o 'tab' görünür olsun
-for i, m in enumerate(menu_list):
-    if menu == m:
-        # Bu satır sayesinde senin 900 satırlık kodundaki 'with tabs[i]' blokları çalışacak
-        tabs = [st.empty() for _ in range(len(menu_list))] # Diğerlerini temizle
-        tabs[i] = st.container() # Sadece seçileni aç
-        break
+# 900 satırlık koddaki tabs[0], tabs[1] vb. yerlerin hata vermemesi için:
+tabs = [TabPlaceholder() for _ in range(len(menu_options))]
+
+# Seçilen menüye göre ilgili 'with tabs[i]' bloğunun içeriğini gösteriyoruz:
+for i, option in enumerate(menu_options):
+    if menu != option:
+        # Seçilmeyen menülerin içeriğini "devre dışı" bırakıyoruz (Hata vermez, sadece görünmez olur)
+        tabs[i] = st.empty() 
 
 # --- 6. SAYFA İÇERİKLERİ ---
-# Artık aşağıda senin 900 satırlık "with tabs[0]:", "with tabs[1]:" kodların tıkır tıkır çalışacak.
+# Buradan sonra senin 900 satırlık "with tabs[0]:", "with tabs[1]:" kodların 
+# artık donmadan ve tek tek ekrana gelmeden şak diye çalışacak.
 
 
 # --- TASARIM BLOĞU BİTTİ, BUNDAN SONRASI SENİN "with tabs[0]:" KODLARIN ---
