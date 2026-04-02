@@ -678,21 +678,16 @@ with tabs[6]:  # Barrow AI'dan sonraki sekme olarak düşün
 
 
 # --- 6. ADMIN (V135 - TAM YETKİLİ YÖNETİM MERKEZİ) ---
-with tabs[7]: 
+with tabs[7]:  
     if st.session_state.get('user') == "someku":
         st.markdown('<h1 style="color:#ff4b4b; text-align:center;">🛡️ YÖNETİM MERKEZİ</h1>', unsafe_allow_html=True)
         
         # --- GENEL İSTATİSTİKLER ---
         try:
-            # Kullanıcıları çek
             u_res = supabase.table("users").select("*").execute()
             users_list = u_res.data if u_res.data else []
-            
-            # Oyuncu sayısını çek
             res_count = supabase.table("oyuncular").select("*", count="exact").limit(1).execute()
             total_players = res_count.count
-            
-            # VIP sayısını hesapla
             vip_count = len([u for u in users_list if u.get('is_vip')])
 
             c1, c2, c3, c4 = st.columns(4)
@@ -705,49 +700,35 @@ with tabs[7]:
             users_list = []
 
         st.markdown("---")
-     dm_tabs = st.tabs(["👥 Kullanıcı & VIP", "🔍 Oyuncu Denetimi", "🛠️ Sistem Bakımı", "📬 Gelen Öneriler"])
+        # SEKME SAYISINI 4'E ÇIKARDIK (Öneriler eklendi)
+        adm_tabs = st.tabs(["👥 Kullanıcı & VIP", "🔍 Oyuncu Denetimi", "🛠️ Sistem Bakımı", "📬 Gelen Öneriler"])
 
         # --- A. KULLANICI & VIP YÖNETİMİ ---
         with adm_tabs[0]:
             st.write("### 👥 Kullanıcı Listesi ve Yetkilendirme")
-            
-            # Arama filtresi (Kullanıcılar arasında)
             search_u = st.text_input("Kullanıcı Ara:", placeholder="Kullanıcı adı yazın...")
-            
             for u in users_list:
-                # Arama yapılıyorsa filtrele
                 if search_u and search_u.lower() not in u['username'].lower():
                     continue
-                    
                 with st.expander(f"{'🌟' if u.get('is_vip') else '⚪'} {u['username']} - {u.get('email', 'E-posta Yok')}"):
                     col1, col2, col3 = st.columns([2, 2, 1])
-                    
                     with col1:
                         st.write(f"**Şifre:** `{u.get('password')}`")
                         st.write(f"**Puan:** `{u.get('puan', 0)}` SC")
                         st.write(f"**Barrow Hak:** `{u.get('barrow_count', 0)}/3`")
-                    
                     with col2:
-                        # VIP Tarih Ayarı
                         db_date = u.get('last_barrow_date')
                         try:
                             default_date = datetime.datetime.strptime(db_date, "%Y-%m-%d").date() if db_date else datetime.date.today()
                         except:
                             default_date = datetime.date.today()
-                        
                         new_date = st.date_input(f"VIP Bitiş Tarihi:", value=default_date, key=f"date_{u['username']}")
                         is_vip_toggle = st.checkbox("VIP Yetkisi Ver", value=u.get('is_vip', False), key=f"check_{u['username']}")
-
                     with col3:
-                        st.write(" İşlemler")
                         if st.button("💾 GÜNCELLE", key=f"upd_{u['username']}", use_container_width=True):
-                            supabase.table("users").update({
-                                "is_vip": is_vip_toggle,
-                                "last_barrow_date": str(new_date)
-                            }).eq("username", u['username']).execute()
+                            supabase.table("users").update({"is_vip": is_vip_toggle, "last_barrow_date": str(new_date)}).eq("username", u['username']).execute()
                             st.success("Güncellendi!")
                             st.rerun()
-                            
                         if u['username'] != "someku":
                             if st.button("🗑️ SİL", key=f"del_{u['username']}", use_container_width=True):
                                 supabase.table("users").delete().eq("username", u['username']).execute()
@@ -766,13 +747,8 @@ with tabs[7]:
                     new_pa = e1.number_input("PA:", value=int(p_edit['pa']))
                     new_ca = e2.number_input("CA:", value=int(p_edit.get('ca', 0)))
                     new_club = e3.text_input("Kulüp:", value=p_edit.get('kulup', ''))
-                    
                     if st.button("DEĞİŞİKLİKLERİ KAYDET"):
-                        supabase.table("oyuncular").update({
-                            "pa": new_pa, 
-                            "ca": new_ca, 
-                            "kulup": new_club
-                        }).eq("oyuncu_adi", target_p_name).execute()
+                        supabase.table("oyuncular").update({"pa": new_pa, "ca": new_ca, "kulup": new_club}).eq("oyuncu_adi", target_p_name).execute()
                         st.success("Oyuncu mermi gibi güncellendi!")
                 else:
                     st.error("Oyuncu bulunamadı.")
@@ -780,61 +756,40 @@ with tabs[7]:
         # --- C. SİSTEM BAKIMI ---
         with adm_tabs[2]:
             st.write("### 🛠️ Kritik Sistem Araçları")
-            
             c_sec1, c_sec2 = st.columns(2)
-            
             with c_sec1:
                 if st.button("🧹 ÖNBELLEĞİ TEMİZLE", use_container_width=True):
                     st.cache_data.clear()
                     st.success("Streamlit cache temizlendi.")
-                
-                st.info("Bu işlem sayfanın yavaşlamasını önler.")
-
             with c_sec2:
-                # Toplu Puan Sıfırlama vb. eklenebilir
                 if st.button("📉 TÜM BARROW HAKLARINI SIFIRLA", use_container_width=True):
                     supabase.table("users").update({"barrow_count": 0}).execute()
-                    st.success("Tüm standart üyelerin günlük hakları sıfırlandı.")
+                    st.success("Tüm haklar sıfırlandı.")
+
+        # --- D. GELEN ÖNERİLER (YENİ SEKME) ---
+        with adm_tabs[3]:
+            st.subheader("🕵️‍♂️ Gelen Önerileri Denetle")
+            try:
+                res_oneri = supabase.table("oneriler").select("*").order("tarih", desc=True).execute()
+                if res_oneri.data:
+                    for o in res_oneri.data:
+                        st.markdown(f"""
+                        <div style="background: rgba(255,255,255,0.05); border-left: 4px solid #58a6ff; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color:#58a6ff; font-weight:bold;">👤 {o['kullanici']}</span>
+                                <span style="color:#8b949e; font-size:11px;">🕒 {o.get('tarih', '')[:16]}</span>
+                            </div>
+                            <p style="margin-top:10px; color:#e6edf3; font-size:14px;">{o['mesaj']}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"🗑️ Arşive Kaldır (#{o['id']})", key=f"del_o_{o['id']}"):
+                            supabase.table("oneriler").delete().eq("id", o['id']).execute()
+                            st.success("Öneri arşivlendi!")
+                            st.rerun()
+                else:
+                    st.info("Şu an bekleyen bir öneri yok.")
+            except Exception as e:
+                st.error(f"Öneriler yüklenemedi: {e}")
 
     else:
-        st.markdown("""
-            <div style="text-align:center; padding:50px;">
-                <h1 style="font-size:100px;">🚫</h1>
-                <h2>YETKİSİZ ERİŞİM</h2>
-                <p>Bu bölgeye sadece ana scout (someku) erişebilir.</p>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # --- 2. ADMIN PANELİ (SADECE SOMEKU GÖRÜR) ---
-        with adm_tabs[3]:
-    if st.session_state.user == "someku":
-        st.markdown("---")
-        st.subheader("🕵️‍♂️ Gelen Önerileri Denetle")
-        
-        try:
-            # Önerileri en yeni en üstte olacak şekilde çek
-            res_oneri = supabase.table("oneriler").select("*").order("tarih", desc=True).execute()
-            
-            if res_oneri.data:
-                for o in res_oneri.data:
-                    # Şık bir kart tasarımı
-                    st.markdown(f"""
-                    <div style="background: rgba(255,255,255,0.05); border-left: 4px solid #58a6ff; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color:#58a6ff; font-weight:bold;">👤 {o['kullanici']}</span>
-                            <span style="color:#8b949e; font-size:11px;">🕒 {o['tarih'][:16]}</span>
-                        </div>
-                        <p style="margin-top:10px; color:#e6edf3; font-size:14px;">{o['mesaj']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # İşlem butonu (Opsiyonel: Silme özelliği)
-                    if st.button(f"🗑️ Arşive Kaldır (#{o['id']})", key=f"del_o_{o['id']}"):
-                        supabase.table("oneriler").delete().eq("id", o['id']).execute()
-                        st.success("Öneri arşivlendi!")
-                        st.rerun()
-            else:
-                st.info("Şu an bekleyen bir öneri yok patron.")
-        except Exception as e:
-            st.error("Admin paneli yüklenemedi.")
-        
+        st.markdown('<div style="text-align:center; padding:50px;"><h1>🚫</h1><h2>YETKİSİZ ERİŞİM</h2></div>', unsafe_allow_html=True)
