@@ -230,33 +230,59 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V210 - ELITE VIP CARD EDITION) ---
+# --- 2. RULET (V220 - 3D ELITE VIP CARD) ---
 with tabs[1]:
+    # 💎 ULTRA PREMIUM CSS: 3D, PARLAMA VE ARKA PLAN FİGÜRLERİ
     st.markdown("""
         <style>
+        .elite-card-container {
+            perspective: 1000px;
+            margin-top: 30px;
+        }
         .elite-card {
-            background: linear-gradient(145deg, #1a1f2c, #0d1117);
-            border: 2px solid #f2cc60;
+            background: linear-gradient(135deg, #1a1f2c 0%, #0d1117 100%);
             border-radius: 20px;
-            padding: 25px;
             position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.6s;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
             overflow: hidden;
-            box-shadow: 0 0 25px rgba(242, 204, 96, 0.2);
+            padding: 30px;
             text-align: center;
-            transition: 0.4s;
         }
-        .elite-card:hover { box-shadow: 0 0 45px rgba(242, 204, 96, 0.4); transform: translateY(-5px); }
-        .card-glow {
-            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(242, 204, 96, 0.05) 0%, transparent 70%);
-            animation: rotate 12s linear infinite;
+        .elite-card:hover {
+            transform: rotateY(10deg) rotateX(5deg) translateY(-10px);
+            box-shadow: 0 25px 55px rgba(242, 204, 96, 0.3);
         }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .player-avatar {
-            width: 100px; height: 100px; border-radius: 50%; border: 3px solid #f2cc60;
-            margin: 0 auto 15px; background: #222; display: flex;
-            justify-content: center; align-items: center; font-size: 45px; position: relative; z-index: 2;
+        /* PA'ya göre değişen neon parlama efektleri */
+        .glow-gold { border: 2px solid #f2cc60; box-shadow: 0 0 20px rgba(242, 204, 96, 0.3); }
+        .glow-silver { border: 2px solid #e6edf3; box-shadow: 0 0 20px rgba(230, 237, 243, 0.2); }
+
+        /* Arka Plandaki Efsane Yüz Silüeti */
+        .player-bg-figure {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 150px;
+            opacity: 0.03; /* Çok hafif, saydam bir gölge */
+            transform: rotate(15deg);
+            z-index: 1;
         }
+        /* Ön Plandaki Oyuncu İkonu */
+        .player-avatar-elite {
+            width: 110px; height: 110px; border-radius: 50%;
+            margin: 0 auto 20px; background: #222; display: flex;
+            justify-content: center; align-items: center; font-size: 50px;
+            position: relative; z-index: 3;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .card-content-elite { position: relative; z-index: 3; }
+        .tm-btn-elite {
+            text-decoration:none; background:#58a6ff; color:white;
+            padding:10px 25px; border-radius:10px; font-weight:bold;
+            display:inline-block; margin-top:20px; transition: 0.3s;
+        }
+        .tm-btn-elite:hover { background: #4090ff; transform: scale(1.05); }
         </style>
     """, unsafe_allow_html=True)
 
@@ -267,7 +293,7 @@ with tabs[1]:
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
 
-    # --- HAK KONTROLÜ ---
+    # --- HAK KONTROLÜ (Aynen Korundu) ---
     can_spin = True
     if not user_is_vip:
         try:
@@ -285,7 +311,7 @@ with tabs[1]:
                 else: st.info(f"🎫 Kalan Günlük Hakkın: {3 - hak}")
         except: pass
 
-    # --- RULET MOTORU ---
+    # --- RULET MOTORU (Aynen Korundu) ---
     player_pool = []
     try:
         def get_price_num(txt):
@@ -293,7 +319,6 @@ with tabs[1]:
                 s = str(txt).lower().replace('£','').replace('€','').replace('m','').strip()
                 return float(re.findall(r"(\d+\.?\d*)", s)[0])
             except: return 0
-
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
         if res.data:
             player_pool = [p for p in res.data if get_price_num(p.get('deger', 0)) <= 15]
@@ -301,7 +326,7 @@ with tabs[1]:
     except: st.error("⚠️ Veri çekme hatası!")
 
     if player_pool and can_spin:
-        if st.button("🎰 RULETİ ÇEVİR (PREMIUM CARD)", use_container_width=True):
+        if st.button("🎰 RULETİ ÇEVİR (3D VIP CARD)", use_container_width=True):
             if not user_is_vip:
                 supabase.table("users").update({"rulet_hak": hak + 1}).eq("username", curr_user).execute()
 
@@ -332,36 +357,44 @@ with tabs[1]:
             st.session_state.animasyon_tamam = True
             st.rerun()
 
-    # --- ELITE KAZANAN KARTI ---
+    # --- 3D ELITE VIP KAZANAN KARTI ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         tm_url = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p['oyuncu_adi'])}"
         
-        # Mevkiye göre avatar seçimi
+        # 1. Mevkiye Göre Efsane Yüz Silüeti (Arka Plan)
         m = p.get('mevki','').upper()
-        avatar = "🧤" if "GK" in m else ("🛡️" if any(x in m for x in ["DC","DL","DR"]) else "🎯")
-        glow_color = "#f2cc60" if p['pa'] >= 165 else "#e6edf3"
+        if "GK" in m: bg_face, avatar = "🧤", "🧤" # Kaleci (Buffon silüeti gibi)
+        elif any(x in m for x in ["DC","DL","DR"]): bg_face, avatar = "🛡️", "🛡️" # Defans (Maldini silüeti gibi)
+        else: bg_face, avatar = "👤", "🎯" # Forvet/Orta Saha (Mbappe/Zidane yüzü gibi)
+
+        # 2. PA'ya Göre Renk ve Glow
+        glow_class = "glow-gold" if p['pa'] >= 170 else "glow-silver"
+        glow_color = "#f2cc60" if p['pa'] >= 170 else "#e6edf3"
 
         st.markdown(f"""
-        <div class="elite-card" style="border-color: {glow_color};">
-            <div class="card-glow"></div>
-            <div style="position: relative; z-index: 2;">
-                <div class="player-avatar" style="border-color: {glow_color}; shadow: 0 0 15px {glow_color};">
-                    {avatar}
-                </div>
-                <h2 style="margin:0; color:#fff; font-size:26px; letter-spacing:1px;">{p['oyuncu_adi'].upper()}</h2>
-                <div style="background:{glow_color}; color:#000; padding:2px 12px; border-radius:8px; font-weight:bold; margin:10px 0; display:inline-block;">
-                    POTANSİYEL: {p['pa']}
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; color:#ccc; font-size:13px; text-align:left; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
-                    <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
-                    <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
-                    <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
-                    <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
-                    <div style="grid-column: span 2; color:#00ff41; font-weight:bold; font-size:16px;">💰 Değer: {p.get('deger','-')}</div>
-                </div>
-                <div style="margin-top:20px;">
-                    <a href="{tm_url}" target="_blank" style="text-decoration:none; background:#58a6ff; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; display:block;">TRANSFERMARKT PROFİLİ</a>
+        <div class="elite-card-container">
+            <div class="elite-card {glow_class}">
+                <div class="player-bg-figure">{bg_face}</div>
+                
+                <div class="card-content-elite">
+                    <div class="player-avatar-elite" style="border-color: {glow_color};">
+                        {avatar}
+                    </div>
+                    <h2 style="margin:0; color:#fff; font-size:28px; letter-spacing:1px; text-transform:uppercase;">{p['oyuncu_adi']}</h2>
+                    <div style="background:{glow_color}; color:#000; padding:3px 15px; border-radius:10px; font-weight:bold; margin:15px 0; display:inline-block; font-size:18px;">
+                        PA: {p['pa']}
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; color:#ccc; font-size:14px; text-align:left; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                        <div>🌍 <b>Uyruk:</b> {p.get('ulke','-')}</div>
+                        <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
+                        <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
+                        <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
+                        <div style="grid-column: span 2; color:#00ff41; font-weight:bold; font-size:18px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">💰 Değer: {p.get('deger','-')}</div>
+                    </div>
+                    
+                    <a href="{tm_url}" target="_blank" class="tm-btn-elite">TRANSFERMARKT PROFİLİ</a>
                 </div>
             </div>
         </div>
@@ -370,6 +403,9 @@ with tabs[1]:
         if st.button("⭐ FAVORİLERE EKLE", key=f"fav_btn_{p['oyuncu_adi']}", use_container_width=True):
             supabase.table("favoriler").insert({"oyuncu_adi": p['oyuncu_adi'], "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
             st.toast("Mermi listeye eklendi!")
+
+
+            
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
     st.markdown('<h2 style="text-align:center;">🏟️ ELITE ARENA - TAKTİK TAHTASI</h2>', unsafe_allow_html=True)
