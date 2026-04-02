@@ -184,6 +184,9 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
+    
+    tabs = st.tabs(["Tab 1", "Tab 2", "Tab 3"]) # Buradaki isimler senin sekmelerin
+
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
 
