@@ -13,10 +13,9 @@ import subprocess
 import threading
 import unicodedata
 
-# --- 1. OTURUM VE SAYFA AYARLARI ---
+# --- 1. SİSTEM AYARLARI (EN ÜSTTE) ---
 st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="💎")
 
-# Kasa Anahtarları (Supabase)
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
 
@@ -24,101 +23,126 @@ if 'supabase' not in st.session_state:
     st.session_state.supabase = create_client(URL, KEY)
 supabase = st.session_state.supabase
 
-# Oturum kutuları
-for key, val in {'authenticated': False, 'user': None, 'is_vip': False, 'menu': "🔍 Scout"}.items():
+# KRİTİK: Tüm değişkenleri (page dahil) en başta tanımlıyoruz ki hata vermesin
+FOR_KEYS = {
+    'authenticated': False, 
+    'user': None, 
+    'is_vip': False, 
+    'menu': "🔍 Scout", 
+    'page': 0, 
+    'fav_list': [],
+    'rulet_winner': None,
+    'animasyon_tamam': False
+}
+for key, val in FOR_KEYS.items():
     if key not in st.session_state: st.session_state[key] = val
 
-# --- 2. ULTRA MODERN UI (CSS) ---
+# --- 2. ELITE BLUE UI (CSS) ---
 st.markdown("""
     <style>
-    /* Ana Tema */
     .stApp { background-color: #0d1117; color: #e6edf3; }
     [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
     
-    /* Yan Menü Butonları (Modern Hover Efekti) */
-    .nav-btn {
-        display: block; width: 100%; padding: 12px 15px; margin: 8px 0;
-        background: transparent; color: #8b949e; border: 1px solid #30363d;
-        border-radius: 10px; text-align: left; cursor: pointer; transition: 0.3s;
-    }
-    .nav-btn:hover { background: #161b22; color: #58a6ff; border-color: #58a6ff; }
-    .nav-active { background: #1f6feb !important; color: white !important; border: none !important; box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3); }
-
     /* Premium Butonlar */
     div.stButton > button {
         background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
         color: white !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important;
+        transition: 0.3s;
     }
+    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4); }
+    
+    /* Kart Tasarımları */
+    .elite-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 15px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. GİRİŞ KONTROLÜ ---
+# --- 3. GİRİŞ VE KAYIT SİSTEMİ ---
 if not st.session_state.authenticated:
-    st.markdown('<h1 style="text-align:center; color:#58a6ff; font-size:40px;">💎 SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
-    with st.form("login_form"):
-        u_id = st.text_input("Scout ID")
-        u_pw = st.text_input("Password", type="password")
-        if st.form_submit_button("SİSTEME BAĞLAN"):
-            if u_id == "someku" and u_pw == "28616128Ok":
-                st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True})
-                st.rerun()
-            else:
-                res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                if res.data:
-                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False))})
+    st.markdown('<h1 style="text-align:center; color:#58a6ff;">💎 SOMEKU ELITE PRO</h1>', unsafe_allow_html=True)
+    
+    auth_tab = st.tabs(["Giriş Yap", "Kayıt Ol"])
+    
+    with auth_tab[0]: # GİRİŞ
+        with st.form("login"):
+            u_id = st.text_input("Kullanıcı Adı")
+            u_pw = st.text_input("Şifre", type="password")
+            if st.form_submit_button("SİSTEME BAĞLAN", use_container_width=True):
+                if u_id == "someku" and u_pw == "28616128Ok":
+                    st.session_state.update({"authenticated": True, "user": u_id, "is_vip": True})
                     st.rerun()
-                else: st.error("Erişim Reddedildi.")
+                else:
+                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                    if res.data:
+                        st.session_state.update({"authenticated": True, "user": u_id, "is_vip": bool(res.data[0].get("is_vip", False))})
+                        st.rerun()
+                    else: st.error("Hatalı Kimlik!")
+
+    with auth_tab[1]: # KAYIT
+        with st.form("register"):
+            n_user = st.text_input("Yeni Kullanıcı Adı")
+            n_email = st.text_input("E-posta")
+            n_pw = st.text_input("Yeni Şifre", type="password")
+            if st.form_submit_button("HESAP OLUŞTUR", use_container_width=True):
+                if n_user and n_email and n_pw:
+                    check = supabase.table("users").select("*").eq("username", n_user).execute()
+                    if check.data: st.error("Bu isim alınmış!")
+                    else:
+                        supabase.table("users").insert({"username": n_user, "email": n_email, "password": n_pw, "is_vip": False, "puan": 0}).execute()
+                        st.success("Kayıt başarılı! Giriş yapabilirsin.")
     st.stop()
 
-# --- 4. PROFESYONEL YAN MENÜ (CUSTOM NAV) ---
+# --- 4. PROFESYONEL YAN MENÜ ---
 with st.sidebar:
     st.markdown(f"<div style='text-align:center;'><h2 style='color:#58a6ff;'>ELITE PRO</h2><p style='color:#8b949e;'>Hoş geldin, {st.session_state.user}</p></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # Menü Elemanları
-    menu_items = {
-        "🔍 Scout": "Scout Merkezi",
-        "🎰 Rulet": "Wonderkid Ruleti",
-        "🏟️ Taktik": "Elite Arena",
-        "⭐ Favori": "Takip Listesi",
-        "🎯 Avcı": "Gelenek Avı",
-        "🛡️ Admin": "Yönetim Paneli"
-    }
+    # Menü seçeneklerini tanımla
+    menu_items = ["🔍 Scout", "🎰 Rulet", "🏟️ Taktik", "⭐ Favori", "🎯 Avcı"]
+    # Admin ise listeye ekle
+    if st.session_state.user == "someku":
+        menu_items.append("🛡️ Admin")
 
-    for key, label in menu_items.items():
-        if st.button(f"{key} {label}", key=f"btn_{key}", use_container_width=True, 
-                     type="primary" if st.session_state.menu == key else "secondary"):
-            st.session_state.menu = key
+    for item in menu_items:
+        if st.button(item, use_container_width=True, type="primary" if st.session_state.menu == item else "secondary"):
+            st.session_state.menu = item
+            st.session_state.page = 0 # Sayfa numarasını sıfırla
             st.rerun()
 
     st.markdown("---")
-    if st.button("🚪 Çıkış"):
+    if st.button("🚪 Güvenli Çıkış", use_container_width=True):
         st.session_state.authenticated = False
         st.rerun()
 
-# --- 5. DİNAMİK İÇERİK YÜKLEME (DONMAYI BİTİREN KISIM) ---
-# 'tabs' değişkenini senin 900 satırlık kodunla uyumlu hale getiriyoruz
-# Ama sadece aktif olan tab'ın kodunu çalıştırıyoruz!
+# --- 5. DİNAMİK İÇERİK (HIZLI YÜKLEME) ---
+m = st.session_state.menu
 
-class TabContext:
-    def __init__(self, active): self.active = active
-    def __enter__(self):
-        if not self.active:
-            # Aktif olmayan sekmelerin kodunu HİÇ ÇALIŞTIRMA (Bu donmayı engeller)
-            st.write('<div style="display:none;">', unsafe_allow_html=True)
-            return st.empty() 
-        return st.container()
-    def __exit__(self, *args):
-        if not self.active: st.write('</div>', unsafe_allow_html=True)
+if m == "🔍 Scout":
+    st.subheader("🔍 Elite Scout Merkezi")
+    # --- Buradan aşağısı senin 900 satırlık Scout kodun (Örnek başlangıç) ---
+    POS_TR = {"Hepsi": "Hepsi", "Kaleci": "GK", "Stoper": "D C", "Forvet": "ST"}
+    # ... senin arama filtrelerin ve kodların buraya gelecek ...
+    st.info("Oyuncu verileri yükleniyor...")
+    # Not: display_data kısmında st.session_state.page hatası almazsın çünkü en başta tanımladık.
 
-# 900 satırlık kodun tabs[0], tabs[1] yapısını bozmadan bağla:
-menu_keys = list(menu_items.keys())
-tabs = [TabContext(st.session_state.menu == k) for k in menu_keys]
+elif m == "🎰 Rulet":
+    st.subheader("🎰 Wonderkid Ruleti")
+    # ... senin rulet kodların ...
 
-# --- 6. SAYFA İÇERİKLERİ ---
-# Buradan aşağısı senin 900 satırlık kodun. 
-# Artık site sadece tıkladığın yeri okuyacak, işlemciyi yormayacak.
+elif m == "🏟️ Taktik":
+    st.subheader("🏟️ Elite Arena")
+    # ... senin taktik tahtası kodların ...
 
+elif m == "⭐ Favori":
+    st.subheader("⭐ Takip Listesi")
+    # ... senin favori kodların ...
+
+elif m == "🎯 Avcı":
+    st.subheader("🎯 Gizli Yetenek Avı")
+    # ... senin avcı oyunu kodların ...
+
+elif m == "🛡️ Admin" and st.session_state.user == "someku":
+    st.subheader("🛡️ Yönetim Paneli")
+    # ... senin admin paneli kodların ...
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
 
 # --- 1. SCOUT ---
