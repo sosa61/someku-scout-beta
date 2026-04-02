@@ -232,14 +232,13 @@ with tabs[0]:
 
 
 
-# --- 2. RULET (V510 - SHADOW ELITE & BUTON FIX) ---
+# --- 2. RULET (V520 - BUTON & RASTGELELİK FIX) ---
 with tabs[1]:
-    # 💎 CSS: SHADOW FIGURE VE NEON SCAN EFEKTLERİ
+    # 💎 CSS: SHADOW FIGURE VE NEON SCAN
     st.markdown("""
         <style>
         @keyframes neon-pulse { 0% { box-shadow: 0 0 5px #f2cc60; } 50% { box-shadow: 0 0 25px #f2cc60; } 100% { box-shadow: 0 0 5px #f2cc60; } }
         @keyframes scan-line { 0% { top: 0%; } 100% { top: 100%; } }
-        
         .elite-card-box {
             background: linear-gradient(145deg, #161b22 0%, #0d1117 100%);
             border: 2px solid #30363d; border-radius: 20px;
@@ -263,60 +262,63 @@ with tabs[1]:
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 ELITE SCOUT RULETİ</h2><p style="color:#8b949e;">Gölge Analiz Modu Aktif</p></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 ELITE SCOUT RULETİ</h2><p style="color:#8b949e;">Tam Veritabanı Tarama Modu</p></div>', unsafe_allow_html=True)
     
     import random, json, time, urllib.parse, datetime
 
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
 
-    # --- 🎲 VERİTABANI MOTORU ---
+    # --- 🎲 TAM RASTGELE MOTOR ---
     player_pool = []
     try:
-        # PA 130-200 arası tüm oyuncuları say ve rastgele 100 tanesini çek
+        # ÖNCE: Kaç oyuncu var onu bulalım (Rastgelelik için offset şart)
         total_q = supabase.table("oyuncular").select("count", count="exact").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
-        total_count = total_q.count if total_q.count else 142
+        total_count = total_q.count if total_q.count else 100
+        
+        # Rastgele bir sayfadan 100 kişi çekiyoruz (Böylece her PA'dan adam gelir)
         rand_off = random.randint(0, max(0, total_count - 100))
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).range(rand_off, rand_off + 99).execute()
         
-        def filter_p(p):
-            try:
-                val = str(p.get('deger', '0')).lower().replace('€','').replace('m','').strip()
-                return float(val) <= 15
-            except: return False
-        
-        player_pool = [p for p in res.data if filter_p(p)]
-        random.shuffle(player_pool)
-    except: pass
+        if res.data:
+            def filter_p(p):
+                try:
+                    val = str(p.get('deger', '0')).lower().replace('€','').replace('m','').strip()
+                    return float(val) <= 15
+                except: return False
+            player_pool = [p for p in res.data if filter_p(p)]
+            random.shuffle(player_pool)
+    except Exception as e:
+        st.error(f"Veritabanı meşgul patron, butonu zorla getiriyorum: {e}")
 
-    # --- 🎰 BAŞLATMA BUTONU ---
+    # --- 🎰 ANALİZ BUTONU ---
     if player_pool:
-        # DİKKAT: Butonun görünmesi için can_spin kontrolünü basit tuttuk
-        if st.button("🚀 ANALİZİ BAŞLAT", key="btn_start_rulet", use_container_width=True):
+        if st.button("🚀 ELITE ANALİZİ BAŞLAT", key="btn_start_v520", use_container_width=True):
             winner = random.choice(player_pool)
             st.session_state.rulet_winner = winner
             st.session_state.animasyon_tamam = False
             
-            # --- TARAMA ANİMASYONU ---
             placeholder = st.empty()
             with placeholder.container():
-                st.markdown('<div class="scan-anim-box"><div class="scan-line"></div><div style="color:#f2cc60; text-align:center; padding-top:25px; font-weight:bold;">SİSTEM TARANIYOR...</div></div>', unsafe_allow_html=True)
-                time.sleep(2.5)
+                st.markdown('<div class="scan-anim-box"><div class="scan-line"></div><div style="color:#f2cc60; text-align:center; padding-top:25px; font-weight:bold;">TÜM VERİTABANI TARANIYOR...</div></div>', unsafe_allow_html=True)
+                time.sleep(2)
             placeholder.empty()
             st.session_state.animasyon_tamam = True
             st.rerun()
+    else:
+        # Eğer veri çekilemezse butonu manuel olarak çıkartalım
+        if st.button("🔄 SİSTEMİ YENİLE (VERİ BEKLENİYOR)", use_container_width=True):
+            st.rerun()
 
-    # --- 🏆 SHADOW ELITE KAZANAN KARTI ---
+    # --- 🏆 KAZANAN KARTI ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         p_name = p['oyuncu_adi']
         pa_val = int(p.get('pa', 0))
         glow_color = "#f2cc60" if pa_val >= 170 else "#e6edf3"
         
-        # Gölge Figür SVG (Hata vermemesi için tırnakları düzelttim)
         shadow_svg = f'<svg width="100" height="100" viewBox="0 0 24 24" fill="{glow_color}" style="filter: drop-shadow(0 0 10px {glow_color});"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>'
 
-        # Favori Kontrolü
         try:
             f_res = supabase.table("favoriler").select("*").eq("oyuncu_adi", p_name).eq("kullanici_adi", curr_user).execute()
             is_fav = len(f_res.data) > 0
@@ -341,10 +343,12 @@ with tabs[1]:
         """, unsafe_allow_html=True)
         
         if not is_fav:
-            if st.button("⭐ LİSTEYE EKLE", key="rulet_add_fav_last"):
+            if st.button("⭐ FAVORİLERE EKLE", key="btn_fav_rulet_v520"):
                 supabase.table("favoriler").insert({"oyuncu_adi": p_name, "kulup": p.get('kulup','-'), "pa": pa_val, "mevki": p.get('mevki','-'), "kullanici_adi": curr_user}).execute()
                 st.toast("Mermi eklendi!")
                 st.rerun()
+        else:
+            st.success("✅ Bu oyuncu zaten mermi listende!")
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
