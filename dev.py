@@ -654,7 +654,7 @@ with tabs[5]:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- ÖNERİ SİSTEMİ (V210 - ELITE FEEDBACK) ---
-with tabs[5]:  # Barrow AI'dan sonraki sekme olarak düşün
+with tabs[6]:  # Barrow AI'dan sonraki sekme olarak düşün
     st.markdown('<h2 style="text-align:center; color:#58a6ff;">📬 SCOUT ÖNERİ MERKEZİ</h2>', unsafe_allow_html=True)
     
     # --- 1. KULLANICI FORMU ---
@@ -678,7 +678,7 @@ with tabs[5]:  # Barrow AI'dan sonraki sekme olarak düşün
 
 
 # --- 6. ADMIN (V135 - TAM YETKİLİ YÖNETİM MERKEZİ) ---
-with tabs[6]: 
+with tabs[7]: 
     if st.session_state.get('user') == "someku":
         st.markdown('<h1 style="color:#ff4b4b; text-align:center;">🛡️ YÖNETİM MERKEZİ</h1>', unsafe_allow_html=True)
         
