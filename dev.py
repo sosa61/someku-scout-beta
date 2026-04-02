@@ -229,25 +229,30 @@ with tabs[0]:
         if c1.button("⬅️ Geri", use_container_width=True) and st.session_state.page > 0: st.session_state.page -= 1; st.rerun()
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
-# --- 2. RULET (V1900 - UCL CHAMPIONS EDITION) ---
+# --- 2. RULET (V2000 - 3D UCL ENGINE & RE-SPIN) ---
 with tabs[1]:
     import random, time, urllib.parse
 
-    # 1. UCL THEME CSS (Lacivert, Gümüş ve Yıldız Efektleri)
+    # 1. 3D UCL THEME CSS (Derinlik, Döndürme ve Işık Efektleri)
     st.markdown("""
         <style>
         @keyframes packL { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
         @keyframes packR { 0% { right: 0; } 100% { right: -100%; opacity: 0; } }
-        @keyframes packShow { 0% { opacity: 0; transform: scale(0.5) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-        @keyframes uclGlow { 0% { border-color: #3c5999; box-shadow: 0 0 15px #3c5999; } 50% { border-color: #ffffff; box-shadow: 0 0 35px #ffffff; } 100% { border-color: #3c5999; box-shadow: 0 0 15px #3c5999; } }
+        @keyframes ucl3D { 0% { transform: scale(0.5) rotateX(45deg) translateY(50px); opacity: 0; } 100% { transform: scale(1) rotateX(0) translateY(0); opacity: 1; } }
+        @keyframes uclGlow { 0% { box-shadow: 0 0 15px #3c5999; } 50% { box-shadow: 0 0 35px #ffffff, 0 0 50px #3c5999; } 100% { box-shadow: 0 0 15px #3c5999; } }
         
-        .pack-frame {
-            width: 350px; min-height: 620px; margin: 20px auto;
+        .stage-3d { perspective: 1200px; padding: 20px 0; text-align: center; }
+        
+        .pack-frame-3d {
+            width: 350px; min-height: 620px; margin: 0 auto;
             position: relative; overflow: hidden; border-radius: 30px;
             background: radial-gradient(circle at center, #101935 0%, #050814 100%);
-            border: 4px solid #3c5999;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9); animation: uclGlow 5s infinite ease-in-out;
+            border: 4px solid #3c5999; transform-style: preserve-3d;
+            animation: ucl3D 0.8s cubic-bezier(0.23, 1, 0.32, 1), uclGlow 4s infinite ease-in-out;
+            transition: transform 0.5s;
         }
+        .pack-frame-3d:hover { transform: rotateY(10deg) rotateX(5deg); }
+
         .pack-gate { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; display: flex; pointer-events: none; }
         .pack-side { 
             width: 50%; height: 100%; 
@@ -258,46 +263,41 @@ with tabs[1]:
         .open-l { animation: packL 1.2s forwards 0.2s; }
         .open-r { animation: packR 1.2s forwards 0.2s; }
         
-        .pack-content { padding: 40px 20px; text-align: center; opacity: 0; animation: packShow 0.8s forwards 0.8s; }
+        .pack-content { padding: 40px 20px; text-align: center; }
         
-        /* UCL STAR SPHERE */
-        .pa-sphere {
+        .pa-sphere-3d {
             width: 100px; height: 100px; border-radius: 50%; 
             background: linear-gradient(135deg, #ffffff 0%, #3c5999 100%);
             color: #050814; margin: 0 auto 15px; display: flex; align-items: center;
             justify-content: center; font-size: 42px; font-weight: 900;
             border: 4px solid #fff; box-shadow: 0 0 30px rgba(255,255,255,0.4);
+            transform: translateZ(30px); /* 3D Derinlik */
         }
         
-        .p-name { color: #fff; font-size: 26px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        .p-price { font-size: 24px; color: #ffffff; font-weight: 900; margin-bottom: 20px; display: block; text-shadow: 0 0 10px #3c5999; }
+        .p-name { color: #fff; font-size: 26px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .p-price { font-size: 24px; color: #ffffff; font-weight: 900; margin-bottom: 20px; display: block; }
         
-        .stat-grid-ultimate { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .stat-box-ultimate { 
-            background: rgba(60, 89, 153, 0.2); padding: 12px 8px; border-radius: 15px; 
-            text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); 
+        .stat-grid-ucl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; transform: translateZ(20px); }
+        .stat-box-ucl { 
+            background: rgba(60, 89, 153, 0.25); padding: 12px 8px; border-radius: 15px; 
+            text-align: center; border: 1px solid rgba(255, 255, 255, 0.15); 
         }
         .stat-l { font-size: 10px; color: #a5b4fc; text-transform: uppercase; font-weight: 800; display: block; }
         .stat-v { font-size: 14px; color: #fff; font-weight: bold; display: block; margin-top: 3px; }
         
         .p-btn-tm {
-            background: linear-gradient(90deg, #101935, #3c5999); color: #fff !important; 
+            background: #fff; color: #101935 !important; 
             text-decoration: none !important; padding: 15px; border-radius: 15px; 
             font-weight: 900; display: block; margin-top: 25px; transition: 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4); text-align:center; border: 1px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-align:center;
         }
-        .p-btn-tm:hover { transform: scale(1.05); background: #fff; color: #101935 !important; }
-        
-        /* UCL SILVER STARS */
         .ucl-stars { color: #ffffff; font-size: 22px; margin-bottom: 10px; text-shadow: 0 0 15px rgba(255,255,255,0.8); }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<h2 style="text-align:center; color:#ffffff; letter-spacing:4px; text-shadow: 0 0 20px #3c5999;">★ CHAMPIONS PACK ★</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="text-align:center; color:#ffffff; letter-spacing:4px; text-shadow: 0 0 20px #3c5999;">★ CHAMPIONS ARENA ★</h2>', unsafe_allow_html=True)
 
     curr_user = st.session_state.get('user')
-
-    # --- ⚽ TÜRKÇE MEVKİ SİSTEMİ ---
     mevki_tr = {
         "GK": "Kaleci", "DC": "Stoper", "DL": "Sol Bek", "DR": "Sağ Bek", 
         "WBL": "Sol Kanat Bek", "WBR": "Sağ Kanat Bek", "DM": "Ön Libero",
@@ -319,22 +319,21 @@ with tabs[1]:
         pool = [p for p in res.data if filter_engine(p)]
     except: pool = []
 
-    # 🎰 TETİKLEYİCİ
-    if pool:
-        if st.button("🏆 CHAMPIONS PACK AÇ", key="v19_trigger", use_container_width=True):
-            st.session_state.rulet_winner = random.choice(pool)
-            st.session_state.animasyon_tamam = False
-            st.markdown('<div class="pack-frame"><div class="pack-gate"><div class="pack-side">★</div><div class="pack-side">★</div></div></div>', unsafe_allow_html=True)
-            time.sleep(0.1)
-            st.session_state.animasyon_tamam = True
-            st.rerun()
-    else:
-        st.error("Kriterlere uygun mermi bulunamadı patron!")
-
-    # 🏆 GÖSTERİM
+    # 🎰 İLK TETİKLEYİCİ (Eğer hiç winner yoksa veya 'Yeni Paket'e basıldıysa)
+    if not st.session_state.get('rulet_winner') or st.session_state.get('reset_rulet'):
+        if pool:
+            if st.button("🏆 CHAMPIONS PACK AÇ", key="v20_main_btn", use_container_width=True):
+                st.session_state.rulet_winner = random.choice(pool)
+                st.session_state.animasyon_tamam = False
+                st.session_state.reset_rulet = False
+                st.markdown('<div class="stage-3d"><div class="pack-frame-3d" style="height:620px;"><div class="pack-gate"><div class="pack-side">★</div><div class="pack-side">★</div></div></div></div>', unsafe_allow_html=True)
+                time.sleep(0.1)
+                st.session_state.animasyon_tamam = True
+                st.rerun()
+    
+    # 🏆 GÖSTERİM & TEKRAR ÇEVİRME
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
-        
         name = str(p.get('oyuncu_adi', '-')).upper()
         pa = int(p.get('pa', 0))
         club = str(p.get('kulup', 'Serbest'))
@@ -342,43 +341,44 @@ with tabs[1]:
         raw_pos = str(p.get('mevki', '-'))
         age = str(p.get('yas', '-'))
         val = str(p.get('deger', '-'))
-        
         pos_tr = mevki_tr.get(raw_pos, raw_pos)
-        
-        # UCL Gümüş Yıldız Sistemi
         star_count = 5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2))
         stars = "★" * star_count
-        
         tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(name)}"
 
-        html_code = f"""
-        <div class="pack-frame">
-            <div class="pack-gate">
-                <div class="pack-side open-l">★</div>
-                <div class="pack-side open-r">★</div>
-            </div>
-            <div class="pack-content">
-                <div class="pa-sphere">{pa}</div>
-                <div class="ucl-stars">{stars}</div>
-                <div class="p-name">{name}</div>
-                <div class="p-price">💰 {val}</div>
-                <div class="stat-grid-ultimate">
-                    <div class="stat-box-ultimate"><span class="stat-l">Kulüp</span><span class="stat-v">{club}</span></div>
-                    <div class="stat-box-ultimate"><span class="stat-l">Ülke</span><span class="stat-v">{nat}</span></div>
-                    <div class="stat-box-ultimate"><span class="stat-l">Mevki</span><span class="stat-v">{pos_tr}</span></div>
-                    <div class="stat-box-ultimate"><span class="stat-l">Yaş</span><span class="stat-v">{age}</span></div>
+        st.markdown(f"""
+        <div class="stage-3d">
+            <div class="pack-frame-3d">
+                <div class="pack-gate">
+                    <div class="pack-side open-l">★</div>
+                    <div class="pack-side open-r">★</div>
                 </div>
-                <a href="{tm_link}" target="_blank" class="p-btn-tm">TRANSFERMARKT PROFİLİ</a>
+                <div class="pack-content">
+                    <div class="pa-sphere-3d">{pa}</div>
+                    <div class="ucl-stars">{stars}</div>
+                    <div class="p-name">{name}</div>
+                    <div class="p-price">💰 {val}</div>
+                    <div class="stat-grid-ucl">
+                        <div class="stat-box-ucl"><span class="stat-l">Kulüp</span><span class="stat-v">{club}</span></div>
+                        <div class="stat-box-ucl"><span class="stat-l">Ülke</span><span class="stat-v">{nat}</span></div>
+                        <div class="stat-box-ucl"><span class="stat-l">Mevki</span><span class="stat-v">{pos_tr}</span></div>
+                        <div class="stat-box-ucl"><span class="stat-l">Yaş</span><span class="stat-v">{age}</span></div>
+                    </div>
+                    <a href="{tm_link}" target="_blank" class="p-btn-tm">TRANSFERMARKT PROFİLİ</a>
+                </div>
             </div>
         </div>
-        """
-        st.markdown(html_code, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
-        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v19_fav"):
-            supabase.table("favoriler").insert({
-                "oyuncu_adi": name, "kulup": club, "pa": pa, "mevki": raw_pos, "kullanici_adi": curr_user
-            }).execute()
-            st.success("Mermi kulübe katıldı!")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⭐ KULÜBE EKLE", key="v20_fav", use_container_width=True):
+                supabase.table("favoriler").insert({"oyuncu_adi": name, "kulup": club, "pa": pa, "mevki": raw_pos, "kullanici_adi": curr_user}).execute()
+                st.toast("Mermi kulübe katıldı!")
+        with col2:
+            if st.button("🔄 YENİ PAKET AÇ", key="v20_retry", use_container_width=True):
+                st.session_state.reset_rulet = True
+                st.rerun()
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
