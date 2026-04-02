@@ -76,6 +76,10 @@ if not st.session_state.authenticated:
                 st.rerun()
             else: st.error("❌ Hatalı Giriş!")
     st.stop()
+    
+    # --- BU SATIRI GİRİŞ KONTROLÜNÜN (st.stop()) HEMEN ALTINA YAPIŞTIR ---
+tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
+
 
 # --- 4. SOL YAN MENÜ ---
 with st.sidebar:
