@@ -230,16 +230,16 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V1400 - GERÇEK VERİ MODU - SIFIR HATA) ---
+# --- 2. RULET (V1500 - KESİN ÇÖZÜM MODU) ---
 with tabs[1]:
     import random, time, urllib.parse
 
-    # 1. CSS TASARIMI (Python değişkenlerinden bağımsız, statik ve hatasız)
+    # 1. ZIRHLI CSS (Parantez çakışması yaşanmaz)
     st.markdown("""
         <style>
-        @keyframes zipL { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
-        @keyframes zipR { 0% { right: 0; } 100% { right: -100%; opacity: 0; } }
-        @keyframes cardRev { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes packL { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
+        @keyframes packR { 0% { right: 0; } 100% { right: -100%; opacity: 0; } }
+        @keyframes packShow { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1); } }
         
         .pack-frame {
             width: 350px; min-height: 600px; margin: 20px auto;
@@ -247,115 +247,113 @@ with tabs[1]:
             background: #0d1117; border: 3px solid #f2cc60;
             box-shadow: 0 25px 50px rgba(0,0,0,0.9);
         }
-        .zip-gate { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; }
-        .zip-part { width: 50%; height: 100%; background: linear-gradient(135deg, #1a1f2c, #0d1117); border: 1px solid #f2cc60; position: relative; }
-        .open-l { animation: zipL 1.2s forwards; }
-        .open-r { animation: zipR 1.2s forwards; }
+        .pack-gate { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; }
+        .pack-side { width: 50%; height: 100%; background: linear-gradient(135deg, #1a1f2c, #0d1117); border: 1px solid #f2cc60; }
+        .open-l { animation: packL 1.2s forwards; }
+        .open-r { animation: packR 1.2s forwards; }
         
-        .card-body { padding: 30px 20px; text-align: center; opacity: 0; animation: cardRev 0.8s forwards 0.6s; }
+        .pack-content { padding: 30px 20px; text-align: center; opacity: 0; animation: packShow 0.8s forwards 0.6s; }
         .pa-sphere {
             width: 90px; height: 90px; border-radius: 50%; background: #f2cc60;
             color: #000; margin: 0 auto 15px; display: flex; align-items: center;
             justify-content: center; font-size: 36px; font-weight: 900;
             border: 4px solid #fff; box-shadow: 0 0 25px rgba(242,204,96,0.6);
         }
-        .p-stars { color: #f2cc60; font-size: 20px; margin-bottom: 5px; }
         .p-name { color: #fff; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; }
-        .p-val { font-size: 22px; color: #00ff41; font-weight: 900; margin-bottom: 20px; display: block; }
+        .p-price { font-size: 22px; color: #00ff41; font-weight: 900; margin-bottom: 20px; display: block; }
         
-        .stat-grid-v3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .stat-unit { background: rgba(255,255,255,0.05); padding: 12px 8px; border-radius: 12px; text-align: center; border: 1px solid rgba(242,204,96,0.1); }
-        .stat-lbl { font-size: 9px; color: #8b949e; text-transform: uppercase; font-weight: 800; display: block; }
-        .stat-txt { font-size: 13px; color: #fff; font-weight: bold; display: block; margin-top: 3px; }
+        .stat-grid-ultimate { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-box-ultimate { background: rgba(255,255,255,0.05); padding: 12px 8px; border-radius: 12px; text-align: center; border: 1px solid rgba(242,204,96,0.1); }
+        .stat-l { font-size: 9px; color: #8b949e; text-transform: uppercase; font-weight: 800; display: block; }
+        .stat-v { font-size: 13px; color: #fff; font-weight: bold; display: block; margin-top: 3px; }
         
-        .p-link {
+        .p-btn {
             background: #58a6ff; color: #fff; text-decoration: none; padding: 14px;
-            border-radius: 12px; font-weight: bold; display: block; margin-top: 25px; transition: 0.3s;
+            border-radius: 12px; font-weight: bold; display: block; margin-top: 25px;
         }
-        .p-link:hover { background: #1f6feb; transform: scale(1.02); }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<h2 style="text-align:center; color:#f2cc60; font-family:sans-serif; letter-spacing:2px;">🧧 ELITE PACK OPENING</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="text-align:center; color:#f2cc60;">🧧 ELITE PACK OPENING</h2>', unsafe_allow_html=True)
 
     curr_user = st.session_state.get('user')
 
-    # 2. HAVUZ (Maks 21 Yaş, PA 130-200, Maks 20M €)
+    # 🎲 HAVUZU HAZIRLA
     try:
-        raw_res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
-        def check_price(p):
+        res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
+        def p_filter(p):
             try:
-                raw_d = str(p.get('deger', '0'))
-                clean_d = "".join(filter(str.isdigit, raw_d))
-                if not clean_d: return True
-                v = float(clean_d)
-                if v > 1000: v = v / 1000000
+                num = "".join(filter(str.isdigit, str(p.get('deger', '0'))))
+                v = float(num)
+                if v > 1000: v /= 1000000
                 return v <= 20
             except: return True
-        pool = [p for p in raw_res.data if check_price(p)]
-    except: pool = []
+        player_pool = [p for p in res.data if p_filter(p)]
+    except: player_pool = []
 
-    # 3. TETİKLEYİCİ
-    if pool:
-        if st.button("🧧 PAKETİ FERMUARLA PATLAT", key="ultimate_v14_btn", use_container_width=True):
-            st.session_state.rulet_winner = random.choice(pool)
+    # 🎰 TETİKLEYİCİ
+    if player_pool:
+        if st.button("🧧 PAKETİ FERMUARLA PATLAT", key="btn_v15_final", use_container_width=True):
+            st.session_state.rulet_winner = random.choice(player_pool)
             st.session_state.animasyon_tamam = False
             
             # Başlangıç Perdesi
-            st.markdown('<div class="pack-frame"><div class="zip-gate"><div class="zip-part"></div><div class="zip-part"></div></div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pack-frame"><div class="pack-gate"><div class="pack-side"></div><div class="pack-side"></div></div></div>', unsafe_allow_html=True)
             time.sleep(0.1)
             st.session_state.animasyon_tamam = True
             st.rerun()
     else:
-        st.error("Kriterlere uygun oyuncu bulunamadı!")
+        st.error("Mermi havuzu boş patron!")
 
-    # 4. GÖSTERİM MOTORU (GERÇEK VERİ ENJEKSİYONU)
+    # 🏆 GÖSTERİM MOTORU (ZIRHLI VERİ AKTARIMI)
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         
-        # VERİLERİ TEMİZLE VE DEĞİŞKENE AL
-        _name = str(p.get('oyuncu_adi', 'Bilinmiyor')).upper()
-        _pa = str(p.get('pa', '0'))
-        _club = str(p.get('kulup', 'Serbest'))
-        _nat = str(p.get('ulke', '-'))
-        _pos = str(p.get('mevki', '-'))
-        _age = str(p.get('yas', '-'))
-        _price = str(p.get('deger', '-'))
+        # Verileri Python Tarafında Hazırla
+        name = str(p.get('oyuncu_adi', 'Bilinmiyor')).upper()
+        pa = str(p.get('pa', '0'))
+        club = str(p.get('kulup', 'Serbest'))
+        nat = str(p.get('ulke', '-'))
+        pos = str(p.get('mevki', '-'))
+        age = str(p.get('yas', '-'))
+        val = str(p.get('deger', '-'))
         
-        _stars = "★" * (5 if int(_pa) >= 180 else (4 if int(_pa) >= 165 else (3 if int(_pa) >= 150 else 2)))
-        _tm_url = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(_name)}"
+        stars = "★" * (5 if int(pa) >= 180 else (4 if int(pa) >= 165 else (3 if int(pa) >= 150 else 2)))
+        tm = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(name)}"
 
-        # KARTI ÇİZ (Buradaki süslü parantezler Python tarafından doldurulur)
-        card_html = f"""
+        # HTML Şablonu (Zırhlı Yöntem: Değişkenleri manuel yerleştiriyoruz)
+        html_template = """
         <div class="pack-frame">
-            <div class="zip-gate">
-                <div class="zip-part open-l"></div>
-                <div class="zip-part open-r"></div>
+            <div class="pack-gate">
+                <div class="pack-side open-l"></div>
+                <div class="pack-side open-r"></div>
             </div>
-            <div class="card-body">
-                <div class="pa-sphere">{_pa}</div>
-                <div class="p-stars">{_stars}</div>
-                <div class="p-name">{_name}</div>
-                <div class="p-val">💰 {_price}</div>
-                
-                <div class="stat-grid-v3">
-                    <div class="stat-unit"><span class="stat-lbl">Kulüp</span><span class="stat-txt">{_club}</span></div>
-                    <div class="stat-unit"><span class="stat-lbl">Ülke</span><span class="stat-txt">{_nat}</span></div>
-                    <div class="stat-unit"><span class="stat-lbl">Mevki</span><span class="stat-txt">{_pos}</span></div>
-                    <div class="stat-unit"><span class="stat-lbl">Yaş</span><span class="stat-txt">{_age}</span></div>
+            <div class="pack-content">
+                <div class="pa-sphere">[[PA]]</div>
+                <div style="color:#f2cc60; font-size:18px; margin-bottom:5px;">[[STARS]]</div>
+                <div class="p-name">[[NAME]]</div>
+                <div class="p-price">💰 [[VAL]]</div>
+                <div class="stat-grid-ultimate">
+                    <div class="stat-box-ultimate"><span class="stat-l">Kulüp</span><span class="stat-v">[[CLUB]]</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Ülke</span><span class="stat-v">[[NAT]]</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Mevki</span><span class="stat-v">[[POS]]</span></div>
+                    <div class="stat-box-ultimate"><span class="stat-l">Yaş</span><span class="stat-v">[[AGE]]</span></div>
                 </div>
-                
-                <a href="{_tm_url}" target="_blank" class="p-link">TRANSFERMARKT PROFİLİ</a>
+                <a href="[[TM]]" target="_blank" class="p-btn">TRANSFERMARKT PROFİLİ</a>
             </div>
         </div>
         """
-        st.markdown(card_html, unsafe_allow_html=True)
         
-        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v14_fav"):
+        # Manuel Değiştirme (Hata Riskini Sıfırlar)
+        final_html = html_template.replace("[[NAME]]", name).replace("[[PA]]", pa).replace("[[CLUB]]", club).replace("[[NAT]]", nat).replace("[[POS]]", pos).replace("[[AGE]]", age).replace("[[VAL]]", val).replace("[[STARS]]", stars).replace("[[TM]]", tm)
+        
+        st.markdown(final_html, unsafe_allow_html=True)
+        
+        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v15_fav"):
             supabase.table("favoriler").insert({
-                "oyuncu_adi": _name, "kulup": _club, "pa": _pa, "mevki": _pos, "kullanici_adi": curr_user
+                "oyuncu_adi": name, "kulup": club, "pa": pa, "mevki": pos, "kullanici_adi": curr_user
             }).execute()
-            st.toast(f"{_name} mermisi kulübe katıldı!")
+            st.success("Mermi kulübe katıldı!")
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
