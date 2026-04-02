@@ -126,7 +126,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- ANA SEKMELER ---
-tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "📋 11 KUR", "⭐ FAVORİLER", "🕵️ YETENEK AVI", "🤖 BARROW AI", "🛠️ ADMIN"])
+tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ 11 KUR", "⭐ FAVORİLER", "🎯 YETENEK AVI", "🧠 BARROW AI", "📬 ÖNERİ", "🛠️ ADMIN"])
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
 
