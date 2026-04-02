@@ -22,78 +22,94 @@ try:
 except Exception as e:
     st.error(f"Bağlantı kurulum hatası: {e}")
 
-# --- 1. OTURUM VE SAYFA AYARLARI ---
+# --- 1. OTURUM VE SAYFA AYARLARI (HATA GİDERİCİ BAŞLANGIÇ) ---
 st.set_page_config(page_title="BETA - SOMEKU ELITE", layout="wide", page_icon="🕵️")
 
-# Oturum kutularını tanımla
-for key in ['authenticated', 'user', 'is_vip', 'page']:
+# Oturum hafızasını (session_state) güvenli bir döngü ile tanımla
+# Bu kısım o aldığın AttributeError hatasını kökten çözer.
+FOR_KEYS = {'authenticated': False, 'user': None, 'is_vip': False, 'page': 0}
+for key, default in FOR_KEYS.items():
     if key not in st.session_state:
-        st.session_state[key] = False if key in ['authenticated', 'is_vip'] else (None if key == 'user' else 0)
+        st.session_state[key] = default
 
-# --- 2. ELITE DARK UI (CSS) ---
+# --- 2. ELITE BLUE UI (CSS) - YEŞİLLER KALDIRILDI ---
 st.markdown("""
     <style>
-    /* Ana Fon ve Sidebar */
+    /* Ana Arka Plan ve Metin */
     .stApp { background-color: #0d1117; color: #e6edf3; }
-    [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
     
-    /* Yan Menü Butonları */
+    /* Sol Yan Menü (Sidebar) */
+    [data-testid="stSidebar"] { 
+        background-color: #010409 !important; 
+        border-right: 1px solid #30363d; 
+    }
+    
+    /* Menü Radio Butonları (Gümüş Grisi ve Mavi Vurgu) */
     div[data-testid="stVerticalBlock"] > div > button {
         background-color: transparent !important;
         border: 1px solid transparent !important;
-        color: #8b949e !important;
+        color: #8b949e !important; /* Gümüş Grisi metin */
         text-align: left !important;
-        padding: 10px 15px !important;
-        font-size: 16px !important;
         transition: 0.3s;
     }
     div[data-testid="stVerticalBlock"] > div > button:hover {
         background-color: #161b22 !important;
-        color: #58a6ff !important;
-        border-left: 3px solid #238636 !important;
+        color: #58a6ff !important; /* Mavi metin vurgusu */
+        border-left: 3px solid #58a6ff !important; /* Mavi sol çizgi */
     }
     
-    /* Kartlar ve VIP Kilitler */
-    .vip-card {
-        background: linear-gradient(145deg, #161b22, #0d1117);
-        border: 1px solid #30363d;
-        border-radius: 12px;
-        padding: 20px;
+    /* Ana Butonlar (Yeşil yerine Profesyonel Mavi) */
+    div.stButton > button {
+        background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Kartlar (Glassmorphism esintili, Koyu Gri) */
+    .vip-card, .stAlert {
+        background: rgba(22, 27, 34, 0.6) !important;
+        border: 1px solid #30363d !important;
+        border-radius: 12px !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. GİRİŞ KONTROLÜ ---
+# --- 3. GİRİŞ KONTROLÜ (ADMIN GARANTİLİ) ---
 if not st.session_state.authenticated:
-    st.markdown('<h1 style="text-align:center; color:#238636;">🕵️ SOMEKU ELITE</h1>', unsafe_allow_html=True)
+    # Başlık rengini de maviye çektik
+    st.markdown('<h1 style="text-align:center; color:#58a6ff;">🕵️ SOMEKU ELITE</h1>', unsafe_allow_html=True)
     with st.container():
-        u_id = st.text_input("Kullanıcı Adı:", key="l_u")
+        u_id = st.text_input("Scout Kimliği:", key="l_u")
         u_pw = st.text_input("Şifre:", type="password", key="l_p")
         if st.button("SİSTEME GİRİŞ YAP", use_container_width=True):
-            if u_id == "someku" and u_pw == "28616128Ok":
+            if u_id == "someku" and u_pw == "28616128Ok": # Admin girişi
                 st.session_state.authenticated = True
                 st.session_state.user = u_id
                 st.session_state.is_vip = True
                 st.rerun()
             else:
-                res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                if res.data:
-                    st.session_state.authenticated = True
-                    st.session_state.user = u_id
-                    st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
-                    st.rerun()
-                else: st.error("❌ Yetkisiz Giriş!")
-    st.stop()
+                try:
+                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                    if res.data:
+                        st.session_state.authenticated = True
+                        st.session_state.user = u_id
+                        st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
+                        st.rerun()
+                    else: st.error("❌ Yetkisiz Erişim! Bilgileri kontrol et patron.")
+                except Exception as e: st.error(f"⚠️ Bağlantı sorunu: {e}")
+    st.stop() # Giriş yapmadan aşağıya geçişi engelle
 
-# --- 4. SOL YAN MENÜ (NAVİGASYON) ---
+# --- 4. SOL YAN MENÜ (NAVİGASYON VE PROFİL) ---
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/detective.png", width=80)
+    # Dedektif ikonunu da daha ciddi bir hale getirdik
+    st.image("https://img.icons8.com/fluency/96/detective.png", width=80)
     st.markdown(f"### {st.session_state.user}")
     st.markdown("---")
     
-    # Menü Seçenekleri
+    # Menü Seçenekleri (Radio Buton olarak, sola dayalı)
     menu = st.radio(
-        "ANA MENÜ",
+        "ELITE NAVIGASYON",
         ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🛡️ Yönetim"],
         index=0
     )
@@ -104,31 +120,33 @@ with st.sidebar:
         st.rerun()
 
 # --- 5. SAYFA İÇERİKLERİ (SEÇİLEN MENÜYE GÖRE) ---
+# BURASI KRİTİK: Artık "with tabs[0]:" değil, "menu == '...'" kontrolü yapıyoruz.
+
 if menu == "🔍 Scout Merkezi":
     st.subheader("🔍 Elite Scout Analizi")
-    # BURAYA ESKİ: with tabs[0]: KODLARINI YAPIŞTIR
+    # BURAYA ESKİ KODUNDAKİ: with tabs[0]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
     
 elif menu == "🎰 Wonderkid Ruleti":
     st.subheader("🎰 Wonderkid Ruleti")
-    # BURAYA ESKİ: with tabs[1]: KODLARINI YAPIŞTIR
+    # BURAYA ESKİ KODUNDAKİ: with tabs[1]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
 
 elif menu == "🏟️ Taktik Tahtası":
-    st.subheader("🏟️ Elite Arena")
-    # BURAYA ESKİ: with tabs[2]: KODLARINI YAPIŞTIR
+    st.subheader("🏟️ Elite Arena - Taktik Tahtası")
+    # BURAYA ESKİ KODUNDAKİ: with tabs[2]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
 
 elif menu == "⭐ Favorilerim":
     st.subheader("⭐ Takip Listem")
-    # BURAYA ESKİ: with tabs[3]: KODLARINI YAPIŞTIR
+    # BURAYA ESKİ KODUNDAKİ: with tabs[3]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
 
 elif menu == "🎯 Avcı Modu":
     st.subheader("🎯 Gizli Yetenek Avı")
-    # BURAYA ESKİ: with tabs[4]: KODLARINI YAPIŞTIR
+    # BURAYA ESKİ KODUNDAKİ: with tabs[4]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
 
 elif menu == "🛡️ Yönetim":
     # Admin kontrolü
     if st.session_state.user == "someku":
         st.subheader("🛡️ Yönetim Paneli")
-        # BURAYA ESKİ: with tabs[6]: KODLARINI YAPIŞTIR
+        # BURAYA ESKİ KODUNDAKİ: with tabs[6]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
     else:
         st.error("Bu bölgeye erişim yetkiniz yok.")
 
