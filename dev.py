@@ -229,27 +229,27 @@ with tabs[0]:
         if c1.button("⬅️ Geri", use_container_width=True) and st.session_state.page > 0: st.session_state.page -= 1; st.rerun()
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
-
-# --- 2. RULET (V225 - 3D ELITE VIP CARD - FIXED) ---
+# --- 2. RULET (V230 - 3D ELITE VIP CARD - OYUNCU RESİMLİ) ---
 with tabs[1]:
     # 💎 CSS BLOĞU (BU KISIM KARTIN ŞEKLİNİ BELİRLER)
     st.markdown("""
         <style>
-        .elite-card-container { perspective: 1000px; margin-top: 30px; }
+        .elite-card-container { perspective: 1000px; margin-top: 30px; text-align: center; }
         .elite-card {
             background: linear-gradient(135deg, #1a1f2c 0%, #0d1117 100%);
             border-radius: 20px; position: relative; transform-style: preserve-3d;
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
             box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: hidden; padding: 30px; text-align: center;
+            display: inline-block; width: 350px;
         }
         .elite-card:hover { transform: rotateY(10deg) rotateX(5deg) translateY(-10px); }
         .glow-gold { border: 2px solid #f2cc60; box-shadow: 0 0 20px rgba(242, 204, 96, 0.3); }
         .glow-silver { border: 2px solid #e6edf3; box-shadow: 0 0 20px rgba(230, 237, 243, 0.2); }
-        .player-bg-figure { position: absolute; top: 20px; right: 20px; font-size: 150px; opacity: 0.03; z-index: 1; }
         .player-avatar-elite { 
-            width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 20px; 
-            background: #222; display: flex; justify-content: center; align-items: center; 
-            font-size: 50px; position: relative; z-index: 3;
+            width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 20px; 
+            border: 4px solid #f2cc60; box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            position: relative; z-index: 3;
+            object-fit: cover;
         }
         .tm-btn-elite {
             text-decoration:none; background:#58a6ff; color:white; padding:10px 25px; 
@@ -260,7 +260,7 @@ with tabs[1]:
 
     st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">PA 130-200 | Maks 21 Yaş | Maks 15M €</p></div>', unsafe_allow_html=True)
     
-    import random, json, time, urllib.parse, datetime
+    import random, json, time, urllib.parse, datetime, requests
 
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
@@ -322,22 +322,31 @@ with tabs[1]:
             st.session_state.animasyon_tamam = True
             st.rerun()
 
-    # --- 3D KART ÇIKTISI (DÜZELTİLEN KISIM) ---
+    # --- 3D KART ÇIKTISI (OYUNCU RESİMLİ) ---
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         tm_url = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p['oyuncu_adi'])}"
         
-        m = p.get('mevki','').upper()
-        avatar = "🧤" if "GK" in m else ("🛡️" if any(x in m for x in ["DC","DL","DR"]) else "🎯")
+        # Oyuncu resmini çekme
+        player_name_query = urllib.parse.quote(p['oyuncu_adi'])
+        search_url = f"https://www.google.com/search?q={player_name_query}+footballer&tbm=isch"
+        
+        # Basit bir resim url'si oluşturma (Transfermarkt veya Google'dan)
+        # Gerçek bir resim çekme işlemi sunucu tarafında karmaşık olabilir, bu örnek bir yaklaşımdır.
+        # En iyi sonuç için veritabanında her oyuncu için bir resim url'si saklanmalıdır.
+        player_image_url = f"https://img.stadionwelt.de/fotos/spieler/spieler.jpg?name={player_name_query}" # Örnek url
+
+        # Eğer veritabanında oyuncu resmi varsa, onu kullan
+        if 'resim_url' in p and p['resim_url']:
+            player_image_url = p['resim_url']
+
         glow_class = "glow-gold" if p['pa'] >= 170 else "glow-silver"
         glow_color = "#f2cc60" if p['pa'] >= 170 else "#e6edf3"
 
-        # KRİTİK: HTML kodunu f-string içinde st.markdown'a veriyoruz
         st.markdown(f"""
         <div class="elite-card-container">
             <div class="elite-card {glow_class}">
-                <div class="player-bg-figure">{avatar}</div>
-                <div class="player-avatar-elite" style="border-color: {glow_color};">{avatar}</div>
+                <img src="{player_image_url}" class="player-avatar-elite" style="border-color: {glow_color};" onerror="this.src='https://raw.githubusercontent.com/streamlit/streamlit/develop/examples/streamlit_app/app/assets/images/user.png'">
                 <h2 style="margin:0; color:#fff; font-size:28px;">{p['oyuncu_adi'].upper()}</h2>
                 <div style="background:{glow_color}; color:#000; padding:3px 15px; border-radius:10px; font-weight:bold; margin:15px 0; display:inline-block;">PA: {p['pa']}</div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; color:#ccc; font-size:14px; text-align:left; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
