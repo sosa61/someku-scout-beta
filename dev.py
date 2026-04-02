@@ -39,42 +39,45 @@ if query_user and not is_authenticated:
     st.session_state.user = None 
     st.session_state.authenticated = False
 
-# --- 5. GİRİŞ VE KAYIT EKRANI (DÜZELTİLMİŞ) ---
+# --- 5. GİRİŞ VE KAYIT EKRANI (KURŞUN GEÇİRMEZ) ---
 if not st.session_state.authenticated:
     st.markdown('<h1 style="text-align:center;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
+    
+    # Giriş ve Kayıt sekmelerini ayırıyoruz
     auth_tabs_ui = st.tabs(["Giriş Yap", "Kayıt Ol"])
 
     with auth_tabs_ui[0]:
-        u_id = st.text_input("Kullanıcı Adı:", key="main_l_user")
-        u_pw = st.text_input("Şifre:", type="password", key="main_l_pw")
-        if st.button("Sisteme Giriş Yap"):
-            res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-            if res.data:
+        u_id = st.text_input("Kullanıcı Adı:", key="login_u")
+        u_pw = st.text_input("Şifre:", type="password", key="login_p")
+        
+        if st.button("Sisteme Giriş Yap", use_container_width=True):
+            if u_id == "someku" and u_pw == "28616128Ok": # Senin özel admin girişin
                 st.session_state.authenticated = True
                 st.session_state.user = u_id
-                st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
+                st.session_state.is_vip = True
                 st.rerun()
             else:
-                st.error("❌ Hatalı şifre!")
+                try:
+                    # Veritabanından kontrol
+                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                    if res.data:
+                        st.session_state.authenticated = True
+                        st.session_state.user = u_id
+                        st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
+                        st.rerun()
+                    else:
+                        st.error("❌ Kullanıcı adı veya şifre hatalı patron!")
+                except Exception as e:
+                    st.error(f"⚠️ Veritabanı bağlantı hatası: {e}")
     
     with auth_tabs_ui[1]:
-        st.info("Yeni bir hesap oluşturun.")
-        # Kayıt kodların burada kalabilir...
-    st.stop()
+        st.info("✨ Yeni bir hesap oluşturun.")
+        # Kayıt kodların buraya devam edebilir...
+        
+    st.stop() # Giriş yapmadan aşağıya geçme
 
-# --- 6. ANA PANEL VE TABS TANIMLAMASI (KRİTİK DÜZELTME) ---
-# Önce yan menüyü hallet
-with st.sidebar:
-    st.markdown(f"### 👤 {st.session_state.user}")
-    if st.button("🚪 Çıkış"):
-        st.session_state.clear()
-        st.rerun()
-
-# ŞİMDİ sekmeleri tanımla (Hata buradaydı, artık sistem 'tabs'ı tanıyacak)
+# --- 6. ANA PANEL VE SEKMELER ---
 tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
-
-# --- 7. İÇERİKLER ---
-# Buradan sonraki "with tabs[0]:" kısımlarına dokunma, onlar çalışacaktır.
 
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
