@@ -230,22 +230,23 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V1500 - KESİN ÇÖZÜM MODU) ---
+# --- 2. RULET (V1600 - TÜRKÇE MEVKİ & DİNAMİK YILDIZ) ---
 with tabs[1]:
     import random, time, urllib.parse
 
-    # 1. ZIRHLI CSS (Parantez çakışması yaşanmaz)
+    # 1. ZIRHLI CSS (Heyecan Katılmış Animasyonlar)
     st.markdown("""
         <style>
         @keyframes packL { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
         @keyframes packR { 0% { right: 0; } 100% { right: -100%; opacity: 0; } }
-        @keyframes packShow { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes packShow { 0% { opacity: 0; transform: scale(0.4) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+        @keyframes neonGlow { 0% { box-shadow: 0 0 10px #f2cc60; } 50% { box-shadow: 0 0 40px #f2cc60, 0 0 60px #ff4b4b; } 100% { box-shadow: 0 0 10px #f2cc60; } }
         
         .pack-frame {
             width: 350px; min-height: 600px; margin: 20px auto;
             position: relative; overflow: hidden; border-radius: 25px;
             background: #0d1117; border: 3px solid #f2cc60;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.9);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.9); animation: neonGlow 3s infinite;
         }
         .pack-gate { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; }
         .pack-side { width: 50%; height: 100%; background: linear-gradient(135deg, #1a1f2c, #0d1117); border: 1px solid #f2cc60; }
@@ -254,12 +255,12 @@ with tabs[1]:
         
         .pack-content { padding: 30px 20px; text-align: center; opacity: 0; animation: packShow 0.8s forwards 0.6s; }
         .pa-sphere {
-            width: 90px; height: 90px; border-radius: 50%; background: #f2cc60;
+            width: 95px; height: 95px; border-radius: 50%; background: #f2cc60;
             color: #000; margin: 0 auto 15px; display: flex; align-items: center;
-            justify-content: center; font-size: 36px; font-weight: 900;
-            border: 4px solid #fff; box-shadow: 0 0 25px rgba(242,204,96,0.6);
+            justify-content: center; font-size: 38px; font-weight: 900;
+            border: 5px solid #fff; box-shadow: 0 0 25px rgba(242,204,96,0.8);
         }
-        .p-name { color: #fff; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; }
+        .p-name { color: #fff; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; }
         .p-price { font-size: 22px; color: #00ff41; font-weight: 900; margin-bottom: 20px; display: block; }
         
         .stat-grid-ultimate { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -269,16 +270,25 @@ with tabs[1]:
         
         .p-btn {
             background: #58a6ff; color: #fff; text-decoration: none; padding: 14px;
-            border-radius: 12px; font-weight: bold; display: block; margin-top: 25px;
+            border-radius: 12px; font-weight: bold; display: block; margin-top: 25px; transition: 0.3s;
         }
+        .p-btn:hover { background: #1f6feb; transform: scale(1.05); }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<h2 style="text-align:center; color:#f2cc60;">🧧 ELITE PACK OPENING</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="text-align:center; color:#f2cc60; letter-spacing:2px;">🧧 ELITE ULTIMATE PACK</h2>', unsafe_allow_html=True)
 
     curr_user = st.session_state.get('user')
 
-    # 🎲 HAVUZU HAZIRLA
+    # --- ⚽ MEVKİ TÜRKÇELEŞTİRME SÖZLÜĞÜ ---
+    mevki_tr = {
+        "GK": "Kaleci", "DC": "Stoper", "DL": "Sol Bek", "DR": "Sağ Bek", 
+        "DM": "Ön Libero", "MC": "Orta Saha", "ML": "Sol Kanat", "MR": "Sağ Kanat",
+        "AMC": "On Numara", "AML": "Sol Forvet", "AMR": "Sağ Forvet", "ST": "Santrafor",
+        "WBL": "Sol Kanat Bek", "WBR": "Sağ Kanat Bek"
+    }
+
+    # 🎲 HAVUZU HAZIRLA (PARA FİLTRESİ 20M)
     try:
         res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
         def p_filter(p):
@@ -293,7 +303,7 @@ with tabs[1]:
 
     # 🎰 TETİKLEYİCİ
     if player_pool:
-        if st.button("🧧 PAKETİ FERMUARLA PATLAT", key="btn_v15_final", use_container_width=True):
+        if st.button("🧧 PAKETİ PATLAT (WALKOUT)", key="btn_v16_final", use_container_width=True):
             st.session_state.rulet_winner = random.choice(player_pool)
             st.session_state.animasyon_tamam = False
             
@@ -305,23 +315,29 @@ with tabs[1]:
     else:
         st.error("Mermi havuzu boş patron!")
 
-    # 🏆 GÖSTERİM MOTORU (ZIRHLI VERİ AKTARIMI)
+    # 🏆 GÖSTERİM MOTORU
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         
         # Verileri Python Tarafında Hazırla
         name = str(p.get('oyuncu_adi', 'Bilinmiyor')).upper()
-        pa = str(p.get('pa', '0'))
+        pa = int(p.get('pa', 0))
         club = str(p.get('kulup', 'Serbest'))
         nat = str(p.get('ulke', '-'))
-        pos = str(p.get('mevki', '-'))
+        raw_pos = str(p.get('mevki', '-'))
         age = str(p.get('yas', '-'))
         val = str(p.get('deger', '-'))
         
-        stars = "★" * (5 if int(pa) >= 180 else (4 if int(pa) >= 165 else (3 if int(pa) >= 150 else 2)))
-        tm = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(name)}"
+        # Mevkiyi Türkçeye Çevir
+        pos = mevki_tr.get(raw_pos, raw_pos)
+        
+        # Potansiyele göre yıldızlar (Dinamik)
+        stars = "★" * (5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2)))
+        
+        # Transfermarkt Link Fix (Arama motoru üzerinden garanti çözüm)
+        tm_link = f"https://www.google.com/search?q={urllib.parse.quote(name + ' transfermarkt')}&btnI"
 
-        # HTML Şablonu (Zırhlı Yöntem: Değişkenleri manuel yerleştiriyoruz)
+        # HTML Şablonu
         html_template = """
         <div class="pack-frame">
             <div class="pack-gate">
@@ -330,7 +346,7 @@ with tabs[1]:
             </div>
             <div class="pack-content">
                 <div class="pa-sphere">[[PA]]</div>
-                <div style="color:#f2cc60; font-size:18px; margin-bottom:5px;">[[STARS]]</div>
+                <div style="color:#f2cc60; font-size:22px; margin-bottom:5px; text-shadow: 0 0 10px #f2cc60;">[[STARS]]</div>
                 <div class="p-name">[[NAME]]</div>
                 <div class="p-price">💰 [[VAL]]</div>
                 <div class="stat-grid-ultimate">
@@ -344,14 +360,14 @@ with tabs[1]:
         </div>
         """
         
-        # Manuel Değiştirme (Hata Riskini Sıfırlar)
-        final_html = html_template.replace("[[NAME]]", name).replace("[[PA]]", pa).replace("[[CLUB]]", club).replace("[[NAT]]", nat).replace("[[POS]]", pos).replace("[[AGE]]", age).replace("[[VAL]]", val).replace("[[STARS]]", stars).replace("[[TM]]", tm)
+        # Manuel Değiştirme
+        final_html = html_template.replace("[[NAME]]", name).replace("[[PA]]", str(pa)).replace("[[CLUB]]", club).replace("[[NAT]]", nat).replace("[[POS]]", pos).replace("[[AGE]]", age).replace("[[VAL]]", val).replace("[[STARS]]", stars).replace("[[TM]]", tm_link)
         
         st.markdown(final_html, unsafe_allow_html=True)
         
-        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v15_fav"):
+        if st.button("⭐ KULÜBE EKLE (FAVORİ)", key="v16_fav"):
             supabase.table("favoriler").insert({
-                "oyuncu_adi": name, "kulup": club, "pa": pa, "mevki": pos, "kullanici_adi": curr_user
+                "oyuncu_adi": name, "kulup": club, "pa": pa, "mevki": raw_pos, "kullanici_adi": curr_user
             }).execute()
             st.success("Mermi kulübe katıldı!")
             
