@@ -653,6 +653,28 @@ with tabs[5]:
     st.markdown('<div style="background:#1a1a1a; color:#facc15; padding:10px; border-radius:10px; display:inline-block; border:1px solid #facc15;">⏳ ÇOK YAKINDA YAYINDA</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
+# --- ÖNERİ SİSTEMİ (V210 - ELITE FEEDBACK) ---
+with tabs[5]:  # Barrow AI'dan sonraki sekme olarak düşün
+    st.markdown('<h2 style="text-align:center; color:#58a6ff;">📬 SCOUT ÖNERİ MERKEZİ</h2>', unsafe_allow_html=True)
+    
+    # --- 1. KULLANICI FORMU ---
+    with st.expander("💡 BİZE ÖNERİDE BULUN", expanded=not st.session_state.is_vip):
+        st.markdown('<p style="color:#8b949e;">Sistemde eksik bir oyuncu mu var? Ya da bir geliştirme fikrin mi var? Hemen yaz!</p>', unsafe_allow_html=True)
+        with st.form("user_oneri_form"):
+            oneri_mesaj = st.text_area("Önerin veya Mesajın:", placeholder="Örn: X oyuncusu PA 170 olmalı, veritabanına eklenmeli...")
+            if st.form_submit_button("🎯 ANALİZE GÖNDER"):
+                if oneri_mesaj:
+                    try:
+                        # Senin Supabase tablonun sütunlarına göre (kullanici, mesaj)
+                        supabase.table("oneriler").insert({
+                            "kullanici": st.session_state.user,
+                            "mesaj": oneri_mesaj
+                        }).execute()
+                        st.success("Mermi yola çıktı patron! En kısa sürede inceleyeceğiz.")
+                    except Exception as e:
+                        st.error(f"Gönderim hatası: {e}")
+                else:
+                    st.warning("Boş mesaj gönderemezsin patron!")
 
 
 # --- 6. ADMIN (V135 - TAM YETKİLİ YÖNETİM MERKEZİ) ---
@@ -782,4 +804,37 @@ with tabs[6]:
                 <p>Bu bölgeye sadece ana scout (someku) erişebilir.</p>
             </div>
         """, unsafe_allow_html=True)
+
+        # --- 2. ADMIN PANELİ (SADECE SOMEKU GÖRÜR) ---
+        with adm_tabs[3]:
+    if st.session_state.user == "someku":
+        st.markdown("---")
+        st.subheader("🕵️‍♂️ Gelen Önerileri Denetle")
+        
+        try:
+            # Önerileri en yeni en üstte olacak şekilde çek
+            res_oneri = supabase.table("oneriler").select("*").order("tarih", desc=True).execute()
+            
+            if res_oneri.data:
+                for o in res_oneri.data:
+                    # Şık bir kart tasarımı
+                    st.markdown(f"""
+                    <div style="background: rgba(255,255,255,0.05); border-left: 4px solid #58a6ff; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color:#58a6ff; font-weight:bold;">👤 {o['kullanici']}</span>
+                            <span style="color:#8b949e; font-size:11px;">🕒 {o['tarih'][:16]}</span>
+                        </div>
+                        <p style="margin-top:10px; color:#e6edf3; font-size:14px;">{o['mesaj']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # İşlem butonu (Opsiyonel: Silme özelliği)
+                    if st.button(f"🗑️ Arşive Kaldır (#{o['id']})", key=f"del_o_{o['id']}"):
+                        supabase.table("oneriler").delete().eq("id", o['id']).execute()
+                        st.success("Öneri arşivlendi!")
+                        st.rerun()
+            else:
+                st.info("Şu an bekleyen bir öneri yok patron.")
+        except Exception as e:
+            st.error("Admin paneli yüklenemedi.")
         
