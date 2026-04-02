@@ -13,142 +13,95 @@ import subprocess
 import threading
 import unicodedata
 
-# --- 1. BAĞLANTI AYARLARI ---
+# --- 1. OTURUM VE SAYFA AYARLARI ---
+st.set_page_config(page_title="BETA - SOMEKU ELITE", layout="wide", page_icon="🕵️")
+
+# Kasa Anahtarların (Sildiğin ama lazım olan kısım)
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
 
 try:
-    supabase = create_client(URL, KEY)
+    if 'supabase' not in st.session_state:
+        st.session_state.supabase = create_client(URL, KEY)
+    supabase = st.session_state.supabase
 except Exception as e:
     st.error(f"Bağlantı kurulum hatası: {e}")
 
-# --- 1. OTURUM VE SAYFA AYARLARI (HATA GİDERİCİ BAŞLANGIÇ) ---
-st.set_page_config(page_title="BETA - SOMEKU ELITE", layout="wide", page_icon="🕵️")
-
-# Oturum hafızasını (session_state) güvenli bir döngü ile tanımla
-# Bu kısım o aldığın AttributeError hatasını kökten çözer.
+# Oturum kutularını tanımla (AttributeError engelleyici)
 FOR_KEYS = {'authenticated': False, 'user': None, 'is_vip': False, 'page': 0}
 for key, default in FOR_KEYS.items():
     if key not in st.session_state:
         st.session_state[key] = default
 
-# --- 2. ELITE BLUE UI (CSS) - YEŞİLLER KALDIRILDI ---
+# --- 2. ELITE BLUE UI (CSS) ---
 st.markdown("""
     <style>
-    /* Ana Arka Plan ve Metin */
     .stApp { background-color: #0d1117; color: #e6edf3; }
-    
-    /* Sol Yan Menü (Sidebar) */
-    [data-testid="stSidebar"] { 
-        background-color: #010409 !important; 
-        border-right: 1px solid #30363d; 
-    }
-    
-    /* Menü Radio Butonları (Gümüş Grisi ve Mavi Vurgu) */
-    div[data-testid="stVerticalBlock"] > div > button {
-        background-color: transparent !important;
-        border: 1px solid transparent !important;
-        color: #8b949e !important; /* Gümüş Grisi metin */
-        text-align: left !important;
-        transition: 0.3s;
-    }
-    div[data-testid="stVerticalBlock"] > div > button:hover {
-        background-color: #161b22 !important;
-        color: #58a6ff !important; /* Mavi metin vurgusu */
-        border-left: 3px solid #58a6ff !important; /* Mavi sol çizgi */
-    }
-    
-    /* Ana Butonlar (Yeşil yerine Profesyonel Mavi) */
+    [data-testid="stSidebar"] { background-color: #010409 !important; border-right: 1px solid #30363d; }
     div.stButton > button {
         background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 100%) !important;
-        color: white !important;
-        border: none !important;
-        font-weight: 600 !important;
+        color: white !important; border: none !important; border-radius: 8px !important;
     }
-    
-    /* Kartlar (Glassmorphism esintili, Koyu Gri) */
-    .vip-card, .stAlert {
-        background: rgba(22, 27, 34, 0.6) !important;
+    /* Yan Menü Tasarımı */
+    .stRadio > div { background-color: transparent !important; }
+    label[data-baseweb="radio"] {
+        background-color: #161b22 !important;
+        padding: 12px 20px !important;
+        border-radius: 10px !important;
+        margin-bottom: 8px !important;
         border: 1px solid #30363d !important;
-        border-radius: 12px !important;
+        transition: 0.3s;
     }
+    label[data-baseweb="radio"]:hover { border-color: #58a6ff !important; background-color: #1c2128 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. GİRİŞ KONTROLÜ (ADMIN GARANTİLİ) ---
+# --- 3. GİRİŞ KONTROLÜ ---
 if not st.session_state.authenticated:
-    # Başlık rengini de maviye çektik
     st.markdown('<h1 style="text-align:center; color:#58a6ff;">🕵️ SOMEKU ELITE</h1>', unsafe_allow_html=True)
-    with st.container():
-        u_id = st.text_input("Scout Kimliği:", key="l_u")
-        u_pw = st.text_input("Şifre:", type="password", key="l_p")
-        if st.button("SİSTEME GİRİŞ YAP", use_container_width=True):
-            if u_id == "someku" and u_pw == "28616128Ok": # Admin girişi
+    u_id = st.text_input("Scout Kimliği:", key="l_u")
+    u_pw = st.text_input("Şifre:", type="password", key="l_p")
+    if st.button("SİSTEME GİRİŞ YAP", use_container_width=True):
+        if u_id == "someku" and u_pw == "28616128Ok":
+            st.session_state.authenticated = True
+            st.session_state.user = u_id
+            st.session_state.is_vip = True
+            st.rerun()
+        else:
+            res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+            if res.data:
                 st.session_state.authenticated = True
                 st.session_state.user = u_id
-                st.session_state.is_vip = True
+                st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
                 st.rerun()
-            else:
-                try:
-                    res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                    if res.data:
-                        st.session_state.authenticated = True
-                        st.session_state.user = u_id
-                        st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
-                        st.rerun()
-                    else: st.error("❌ Yetkisiz Erişim! Bilgileri kontrol et patron.")
-                except Exception as e: st.error(f"⚠️ Bağlantı sorunu: {e}")
-    st.stop() # Giriş yapmadan aşağıya geçişi engelle
+            else: st.error("❌ Hatalı Giriş!")
+    st.stop()
 
-# --- 4. SOL YAN MENÜ (NAVİGASYON VE PROFİL) ---
+# --- 4. SOL YAN MENÜ ---
 with st.sidebar:
-    # Dedektif ikonunu da daha ciddi bir hale getirdik
-    st.image("https://img.icons8.com/fluency/96/detective.png", width=80)
+    st.image("https://img.icons8.com/fluency/96/detective.png", width=60)
     st.markdown(f"### {st.session_state.user}")
     st.markdown("---")
-    
-    # Menü Seçenekleri (Radio Buton olarak, sola dayalı)
-    menu = st.radio(
-        "ELITE NAVIGASYON",
-        ["🔍 Scout Merkezi", "🎰 Wonderkid Ruleti", "🏟️ Taktik Tahtası", "⭐ Favorilerim", "🎯 Avcı Modu", "🛡️ Yönetim"],
-        index=0
-    )
-    
+    menu = st.radio("NAVİGASYON", ["🔍 Scout", "🎰 Rulet", "🏟️ Taktik", "⭐ Favoriler", "🎯 Avcı", "🛡️ Yönetim"])
     st.markdown("---")
-    if st.button("🚪 Oturumu Kapat", use_container_width=True):
+    if st.button("🚪 Çıkış"):
         st.session_state.authenticated = False
         st.rerun()
 
-# --- 5. SAYFA İÇERİKLERİ (SEÇİLEN MENÜYE GÖRE) ---
-# BURASI KRİTİK: Artık "with tabs[0]:" değil, "menu == '...'" kontrolü yapıyoruz.
-
-if menu == "🔍 Scout Merkezi":
+# --- 5. SAYFA İÇERİKLERİ ---
+if menu == "🔍 Scout":
     st.subheader("🔍 Elite Scout Analizi")
-    # BURAYA ESKİ KODUNDAKİ: with tabs[0]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
-    
-elif menu == "🎰 Wonderkid Ruleti":
+    # Buraya orijinal Scout kodların gelecek (POS_TR vs.)
+
+elif menu == "🎰 Rulet":
     st.subheader("🎰 Wonderkid Ruleti")
-    # BURAYA ESKİ KODUNDAKİ: with tabs[1]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
-
-elif menu == "🏟️ Taktik Tahtası":
-    st.subheader("🏟️ Elite Arena - Taktik Tahtası")
-    # BURAYA ESKİ KODUNDAKİ: with tabs[2]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
-
-elif menu == "⭐ Favorilerim":
-    st.subheader("⭐ Takip Listem")
-    # BURAYA ESKİ KODUNDAKİ: with tabs[3]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
-
-elif menu == "🎯 Avcı Modu":
-    st.subheader("🎯 Gizli Yetenek Avı")
-    # BURAYA ESKİ KODUNDAKİ: with tabs[4]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
+    # Buraya orijinal Rulet kodların gelecek
 
 elif menu == "🛡️ Yönetim":
-    # Admin kontrolü
     if st.session_state.user == "someku":
         st.subheader("🛡️ Yönetim Paneli")
-        # BURAYA ESKİ KODUNDAKİ: with tabs[6]: ALTINDAKİ HER ŞEYİ YAPIŞTIR
-    else:
-        st.error("Bu bölgeye erişim yetkiniz yok.")
+        # Buraya Admin tablosu kodların gelecek
+    else: st.error("Yetkisiz alan!")
 
 # --- TASARIM BLOĞU BİTTİ, BUNDAN SONRASI SENİN "with tabs[0]:" KODLARIN ---
 
