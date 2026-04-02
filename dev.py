@@ -22,12 +22,16 @@ try:
 except Exception as e:
     st.error(f"Bağlantı kurulum hatası: {e}")
 
-# --- 1. TASARIM VE GİRİŞ DÜZENLEME BLOĞU (SADECE BURAYI EKLE) ---
-
-# Sayfa ayarını en üste taşıdık (Varsa eskisiyle değiştir)
+# --- 1. OTURUM VE SAYFA AYARLARI (BURASI EN ÜSTTE OLMALI) ---
 st.set_page_config(page_title="BETA - SOMEKU SCOUT", layout="wide", page_icon="🕵️")
 
-# MODER PREMIUM TASARIM (CSS)
+if 'authenticated' not in st.session_state: st.session_state.authenticated = False
+if 'user' not in st.session_state: st.session_state.user = None
+if 'is_vip' not in st.session_state: st.session_state.is_vip = False
+if 'fav_list' not in st.session_state: st.session_state.fav_list = []
+if 'page' not in st.session_state: st.session_state.page = 0
+
+# MODERN PREMIUM TASARIM (CSS)
 st.markdown("""
     <style>
     .stApp { background: linear-gradient(145deg, #0d1117 0%, #161b22 100%); color: #e6edf3; }
@@ -36,27 +40,22 @@ st.markdown("""
         color: white; border: none; border-radius: 8px; padding: 10px 24px;
         font-weight: 600; transition: all 0.3s ease; width: 100%;
     }
-    div.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(46, 160, 67, 0.4); }
     [data-testid="stSidebar"] { background-color: #0d1117; border-right: 1px solid #30363d; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] {
-        height: 45px; background-color: #161b22; border-radius: 8px 8px 0 0;
-        border: 1px solid #30363d; color: #8b949e;
-    }
+    .stTabs [data-baseweb="tab"] { height: 45px; background-color: #161b22; color: #8b949e; }
     .stTabs [aria-selected="true"] { background-color: #238636 !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# GİRİŞ KONTROLÜ (SENİN ŞİFRENİ VE TABS HATASINI DÜZELTEN KISIM)
+# --- 2. GİRİŞ KONTROLÜ ---
 if not st.session_state.authenticated:
     st.markdown('<h1 style="text-align:center;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
     auth_tabs_ui = st.tabs(["Giriş Yap", "Kayıt Ol"])
 
     with auth_tabs_ui[0]:
-        u_id = st.text_input("Kullanıcı Adı:", key="l_u")
-        u_pw = st.text_input("Şifre:", type="password", key="l_p")
+        u_id = st.text_input("Kullanıcı Adı:", key="login_u")
+        u_pw = st.text_input("Şifre:", type="password", key="login_p")
         if st.button("Sisteme Giriş Yap", use_container_width=True):
-            if u_id == "someku" and u_pw == "28616128Ok": # Admin girişi garantisi
+            if u_id == "someku" and u_pw == "28616128Ok":
                 st.session_state.authenticated = True
                 st.session_state.user = u_id
                 st.session_state.is_vip = True
@@ -68,14 +67,11 @@ if not st.session_state.authenticated:
                     st.session_state.user = u_id
                     st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
                     st.rerun()
-                else: st.error("❌ Hatalı kullanıcı adı veya şifre!")
-    
-    with auth_tabs_ui[1]:
-        st.info("✨ Yeni bir hesap oluşturun.")
-        # Buraya senin kayıt kodların (new_user, new_email vs.) gelecek
+                else:
+                    st.error("❌ Hatalı giriş!")
     st.stop()
 
-# ANA SEKMELER (HATA VEREN TABS TANIMLAMASI BURADA OLMALI)
+# --- 3. ANA SEKMELER ---
 tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
 
 # --- TASARIM BLOĞU BİTTİ, BUNDAN SONRASI SENİN "with tabs[0]:" KODLARIN ---
