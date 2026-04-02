@@ -3,131 +3,187 @@ from supabase import create_client, Client
 import urllib.parse
 import pandas as pd
 import random
-import json
 import time
 import re
 import streamlit.components.v1 as components
-import unicodedata
+import matplotlib.pyplot as plt
 import datetime
-
-# Sayfa ayarını en üste taşıdık (Zırhlı Versiyon)
-st.set_page_config(page_title="SOMEKU ELITE PRO", layout="wide", page_icon="🕵️")
+import os
+import subprocess
+import threading
+import unicodedata
 
 # --- 1. BAĞLANTI AYARLARI ---
 URL = "https://iwgowefraytdbcdgeqdz.supabase.co"
 KEY = "sb_publishable_NHESQOd8-v3tYpVPcz88-w_vypIPQ8Z"
 
-if 'supabase' not in st.session_state:
-    st.session_state.supabase = create_client(URL, KEY)
-supabase = st.session_state.supabase
+try:
+    supabase = create_client(URL, KEY)
+except Exception as e:
+    st.error(f"Bağlantı kurulum hatası: {e}")
 
-# Oturum Sigortası (Hata Engelleyici)
-FOR_KEYS = {'authenticated': False, 'user': None, 'is_vip': False, 'page': 0, 'fav_list': []}
-for key, val in FOR_KEYS.items():
-    if key not in st.session_state: st.session_state[key] = val
+# --- 2. OTURUM AYARLARI ---
+if 'authenticated' not in st.session_state: st.session_state.authenticated = False
+if 'user' not in st.session_state: st.session_state.user = None
+if 'is_vip' not in st.session_state: st.session_state.is_vip = False
+if 'fav_list' not in st.session_state: st.session_state.fav_list = []
+if 'page' not in st.session_state: st.session_state.page = 0
+# --- 3. 🔄 F5 VE HAFIZA KONTROLÜ (ZIRHLI VERSİYON) ---
+query_user = st.query_params.get("user", None)
+is_authenticated = st.session_state.get("authenticated", False)
 
-# --- 2. ZENGİN PEMBE-MOR UI (CSS) ---
-st.markdown("""
-    <style>
-    /* Ana Arka Plan Gradiyenti (Attığın resimdeki gibi) */
-    .stApp { 
-        background: linear-gradient(135deg, #7928ca 0%, #ff0080 100%); 
-        color: white; 
-    }
-    
-    /* 3D Figür Kutusu Tasarımı */
-    .figure-box {
-        background: #ff6600; /* Kutu turuncusu */
-        border: 4px solid #fff;
-        border-radius: 20px;
-        padding: 15px;
-        box-shadow: 15px 15px 30px rgba(0,0,0,0.4);
-        text-align: center;
-        transition: 0.3s;
-        margin-bottom: 20px;
-    }
-    .figure-box:hover { transform: translateY(-10px) rotate(2deg); }
-    .figure-img { width: 100%; border-radius: 12px; margin-bottom: 10px; border: 2px solid white; }
-    .figure-title { font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; color:white;}
-    .figure-tag { background: white; color: #ff6600; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; display: inline-block; margin-top: 5px; }
+# EĞER GİZLİ SEKMEDEN LİNKLE GELİNİYORSA:
+# (Yani URL'de isim var ama bu tarayıcıda henüz şifre girilmemişse)
+if query_user and not is_authenticated:
+    # Hafızayı zorla boş tut, URL'deki isme inanma!
+    st.session_state.user = None 
+    st.session_state.authenticated = False
 
-    /* Giriş Butonları */
-    div.stButton > button {
-        background: linear-gradient(90deg, #facc15 0%, #eab308 100%) !important;
-        color: #000 !important; border: none !important; border-radius: 50px !important;
-        font-weight: 800 !important; height: 50px !important; transition: 0.3s !important;
-    }
-    div.stButton > button:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+# --- 5. GİRİŞ VE KAYIT EKRANI ---
+if not is_authenticated:
+    st.markdown('<h1 style="text-align:center;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
+    if query_user:
+        st.warning("⚠️ Bu profil kilitlidir. Görmek için önce giriş yapmalısın!")
 
-    /* Sidebar Temizleme */
-    [data-testid="stSidebar"] { background-color: rgba(0,0,0,0.3) !important; border-right: 1px solid rgba(255,255,255,0.1); }
-    
-    /* Tabs Tasarımı */
-    .stTabs [data-baseweb="tab"] { background-color: rgba(255,255,255,0.1); border-radius: 10px; color: white; margin-right:5px;}
-    .stTabs [aria-selected="true"] { background-color: #ff6600 !important; color: white !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    auth_tabs = st.tabs(["Giriş Yap", "Kayıt Ol"])
 
-# --- 3. GİRİŞ VE KAYIT EKRANI ---
-if not st.session_state.authenticated:
-    st.markdown('<h1 style="text-align:center; font-size:50px; color:white;">🕵️ SOMEKU SCOUT</h1>', unsafe_allow_html=True)
-    
-    auth_tabs_ui = st.tabs(["Giriş Yap", "Kayıt Ol"])
-
-    with auth_tabs_ui[0]: # GİRİŞ
-        with st.form("login_form"):
-            u_id = st.text_input("Kullanıcı Adı")
-            u_pw = st.text_input("Şifre", type="password")
-            if st.form_submit_button("SİSTEME BAĞLAN", use_container_width=True):
-                # Admin kontrolü
-                if u_id == "someku" and u_pw == "28616128Ok":
+    with auth_tabs[0]:
+        u_id = st.text_input("Kullanıcı Adı:", key="main_l_user")
+        u_pw = st.text_input("Şifre:", type="password", key="main_l_pw")
+        if st.button("Sisteme Giriş Yap"):
+            try:
+                res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
+                if res.data:
+                    st.session_state.authenticated = True
+                    st.session_state.user = u_id
+                    st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
+                    st.query_params["user"] = u_id
+                    st.rerun()
+                elif u_id == "someku" and u_pw == "28616128Ok":
                     st.session_state.authenticated = True
                     st.session_state.user = u_id
                     st.session_state.is_vip = True
+                    st.query_params["user"] = u_id
                     st.rerun()
                 else:
-                    try:
-                        res = supabase.table("users").select("*").eq("username", u_id).eq("password", u_pw).execute()
-                        if res.data:
-                            st.session_state.authenticated = True
-                            st.session_state.user = u_id
-                            st.session_state.is_vip = bool(res.data[0].get("is_vip", False))
-                            st.rerun()
-                        else: st.error("❌ Yanlış kullanıcı adı veya şifre!")
-                    except: st.error("⚠️ Veritabanı bağlantı hatası!")
+                    st.error("❌ Hatalı kullanıcı adı veya şifre!")
+            except Exception as e:
+                st.error(f"⚠️ Giriş Hatası: {e}")
 
-    with auth_tabs_ui[1]: # KAYIT
-        with st.form("reg_form"):
-            n_user = st.text_input("Yeni Kullanıcı Adı")
-            n_email = st.text_input("E-posta")
-            n_pw = st.text_input("Yeni Şifre", type="password")
-            if st.form_submit_button("HESAP OLUŞTUR"):
-                if n_user and n_email and n_pw:
-                    check = supabase.table("users").select("*").eq("username", n_user).execute()
-                    if check.data: st.error("❌ Bu isim sistemde kayıtlı!")
-                    else:
-                        supabase.table("users").insert({"username": n_user, "email": n_email, "password": n_pw, "is_vip": False, "puan": 0}).execute()
-                        st.success("✅ Kayıt başarılı! Giriş yapabilirsin.")
-    
-    # Giriş Ekranındaki Hayali Figür Galerisi (Attığın resimdeki gibi)
-    st.markdown("<br><h3 style='text-align:center; color:white;'>🔥 SON TESLİM EDİLEN FİGÜRLER</h3>", unsafe_allow_html=True)
-    g1, g2, g3 = st.columns(3)
-    
-    # Resim linkleri Midjourney ile üretilmiş gibi duracak (Temsili linkler)
-    with g1:
-        st.markdown("""<div class="figure-box"><img src="https://assets.mixkit.co/videos/preview/mixkit-player-jumping-in-soccer-match-34444-large.mp4" class="figure-img"><div class="figure-title">MBAPPE #7</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
-    with g2:
-        st.markdown("""<div class="figure-box"><img src="https://assets.mixkit.co/videos/preview/mixkit-goalkeeper-catching-soccer-ball-34436-large.mp4" class="figure-img"><div class="figure-title">MUSLERA #1</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
-    with g3:
-        st.markdown("""<div class="figure-box"><img src="https://assets.mixkit.co/videos/preview/mixkit-soccer-player-kicking-ball-in-stadium-34438-large.mp4" class="figure-img"><div class="figure-title">ICARDI #9</div><div class="figure-tag">KİŞİYE ÖZEL ÜRETİM</div></div>""", unsafe_allow_html=True)
-    
-    st.stop() # Giriş yapmadan aşağıya geçme
+    with auth_tabs[1]:
+        st.info("✨ Yeni bir hesap oluşturun.")
+        new_user = st.text_input("Yeni Kullanıcı Adı:", key="reg_user")
+        new_email = st.text_input("E-posta Adresi:", key="reg_email")
+        new_pw = st.text_input("Yeni Şifre:", type="password", key="reg_pw")
+        if st.button("Hemen Kayıt Ol", use_container_width=True):
+            if new_user and new_email and new_pw:
+                check = supabase.table("users").select("*").or_(f"username.eq.{new_user},email.eq.{new_email}").execute()
+                if check.data:
+                    st.error("❌ Bu kullanıcı adı veya e-posta zaten kullanılıyor!")
+                else:
+                    data = {"username": new_user, "email": new_email, "password": new_pw, "is_vip": False, "puan": 0}
+                    supabase.table("users").insert(data).execute()
+                    st.success("✅ Kayıt başarılı! Giriş sekmesine dönebilirsin.")
+    st.stop()
 
-# --- 6. ANA PANEL VE SEKMELER (HATA GİDERİCİ BAĞLANTI) ---
-tabs = st.tabs(["🔍 SCOUT", "🎰 RULET", "🏟️ KADRO", "⭐ FAVORİLER", "🎯 AVCI", "🤵 BARROW", "🛡️ ADM"])
+# --- 6. YAN MENÜ VE ÇIKİŞ BUTONU ---
+with st.sidebar:
+    st.markdown(f"### 👤 Hoş geldin, {st.session_state.user}")
+    if st.session_state.is_vip:
+        st.success("🌟 VIP SCOUT ÜYESİ")
+    else:
+        st.info("🆓 STANDART ÜYE")
+    
+    st.markdown("---")
+    if st.button("🚪 Güvenli Çıkış Yap", use_container_width=True):
+        st.session_state.clear() # Tüm hafızayı boşalt
+        st.query_params.clear()  # URL'yi temizle
+        st.rerun()
 
-# Senin koddaki tabs[0], tabs[1] yapılarını buraya bağla...
-# HİÇBİR ŞEYİ SİLMEDEN YERLEŞTİREBİLİRSİN.
+# --- 7. VIP TAZELEME MOTORU ---
+try:
+    v_res = supabase.table("users").select("is_vip").eq("username", st.session_state.user).execute()
+    if v_res.data:
+        st.session_state.is_vip = bool(v_res.data[0].get("is_vip", False))
+except:
+    pass
+
+# Sayfa ayarlarını dükkanın içine girdikten sonra yapıyoruz
+st.set_page_config(page_title="SOMEKU SCOUT", layout="wide", page_icon="🕵️")
+
+# Buradan aşağısı senin tabs = st.tabs([...]) kodlarınla devam edecek...
+
+# --- SAYFA AYARLARI ---
+st.set_page_config(page_title="SOMEKU SCOUT", layout="wide", page_icon="🕵️")
+
+# --- BETA ÖZEL: MODERN PREMIUM TASARIM (CSS) ---
+st.markdown("""
+    <style>
+    /* Ana Arka Plan Gradiyenti */
+    .stApp {
+        background: linear-gradient(145deg, #0d1117 0%, #161b22 100%);
+        color: #e6edf3;
+    }
+
+    /* Kart Tasarımları (Glassmorphism) */
+    .stMarkdown div[data-testid="stMarkdownContainer"] p {
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Pro Kilit Kartı Tasarımı */
+    .vip-lock-card {
+        background: rgba(242, 204, 96, 0.05);
+        border: 1px dashed #f2cc60;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        backdrop-filter: blur(5px);
+        margin: 10px 0;
+    }
+
+    /* Modern Butonlar */
+    div.stButton > button {
+        background: linear-gradient(90deg, #238636 0%, #2ea043 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+
+    div.stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(46, 160, 67, 0.4);
+    }
+
+    /* Sidebar (Yan Menü) Güzelleştirme */
+    [data-testid="stSidebar"] {
+        background-color: #0d1117;
+        border-right: 1px solid #30363d;
+    }
+
+    /* Tab (Sekme) Tasarımı */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: transparent;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 45px;
+        background-color: #161b22;
+        border-radius: 8px 8px 0 0;
+        border: 1px solid #30363d;
+        color: #8b949e;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #238636 !important;
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # (Buradan aşağısı senin gönderdiğin SCOUT, RULET, 11 KUR vb. kodlarınla devam ediyor...)
 
@@ -231,73 +287,69 @@ with tabs[0]:
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
 
-# --- 2. RULET (V200 - ELITE SINGLE RULET) ---
+# --- 2. RULET (V196 - ECONOMY MIX) ---
 with tabs[1]:
-    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">PA 130-200 | Maks 21 Yaş | Maks 15M €</p></div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;"><h2 style="color:#ef4444;">🎰 WONDERKID RULETİ</h2><p style="color:#8b949e;">Maksimum 21 Yaş | Maksimum 30M Değer</p></div>', unsafe_allow_html=True)
     
     import random
     import json
     import time
     import urllib.parse
-    from datetime import datetime
 
     user_is_vip = st.session_state.get('is_vip', False)
     curr_user = st.session_state.get('user')
 
-    # --- HAK KONTROLÜ (STANDART ÜYELER İÇİN) ---
-    can_spin = True
-    if not user_is_vip:
-        u_data = supabase.table("users").select("rulet_hak, last_rulet_date").eq("username", curr_user).execute()
-        if u_data.data:
-            today = str(datetime.now().date())
-            db_date = u_data.data[0].get("last_rulet_date")
-            hak = u_data.data[0].get("rulet_hak", 0)
-            
-            if db_date != today:
-                # Gün değişmiş, hakları sıfırla
-                supabase.table("users").update({"rulet_hak": 0, "last_rulet_date": today}).eq("username", curr_user).execute()
-                hak = 0
-            
-            if hak >= 3:
-                st.warning("🚫 Günlük 3 çevirme hakkın doldu patron! Yarın gel veya VIP'ye geç.")
-                can_spin = False
-            else:
-                st.info(f"🎫 Kalan Günlük Hakkın: {3 - hak}")
+    # --- RULET AYARLARI ---
+    if user_is_vip:
+        st.markdown('<div style="text-align:center; padding:10px; background:#f2cc60; color:black; border-radius:15px; font-weight:bold; margin-bottom:15px;">🌟 ALTIN VIP RULET (PA 140-200)</div>', unsafe_allow_html=True)
+        min_pa, max_pa = 140, 200
+        slot_border = "#f2cc60"
+    else:
+        st.markdown('<div style="text-align:center; padding:10px; background:#30363d; color:white; border-radius:15px; margin-bottom:15px;">🎰 STANDART RULET (PA 125-150)</div>', unsafe_allow_html=True)
+        min_pa, max_pa = 125, 150 
+        slot_border = "#30363d"
 
-    # --- RULET MOTORU ---
+    if 'rulet_winner' not in st.session_state: st.session_state.rulet_winner = None
+    if 'animasyon_tamam' not in st.session_state: st.session_state.animasyon_tamam = False
+
+    # --- TAM KARIŞIK VE GÜVENLİ VERİ ÇEKME ---
     player_pool = []
     try:
         def get_price_num(txt):
             try:
-                s = str(txt).lower().replace('£','').replace('€','').replace('m','').strip()
-                return float(re.findall(r"(\d+\.?\d*)", s)[0])
+                s = str(txt).lower().replace('£','').replace('€','').strip()
+                n = float(re.findall(r"(\d+\.?\d*)", s)[0])
+                if 'm' in s: return n
+                if 'k' in s: return n / 1000
+                return n if n < 1000 else n / 1000000
             except: return 0
 
-        # Kriterler: PA 130-200, Yaş <= 21, Değer <= 15M
-        res = supabase.table("oyuncular").select("*").gte("pa", 130).lte("pa", 200).lte("yas", 21).execute()
+        # Rastgele bir sayfadan çekerek tam karışıklık sağlıyoruz
+        random_offset = random.randint(0, 100)
+        res = supabase.table("oyuncular").select("*").gte("pa", min_pa).lte("pa", max_pa).lte("yas", 21).range(random_offset, random_offset + 150).execute()
+        
         if res.data:
-            player_pool = [p for p in res.data if get_price_num(p.get('deger', 0)) <= 15]
+            # Sadece değeri 30M ve altı olanları ayıkla
+            player_pool = [p for p in res.data if get_price_num(p.get('deger', 0)) <= 30]
             random.shuffle(player_pool)
-    except:
-        st.error("⚠️ Veri çekme hatası!")
+    except Exception as e:
+        st.error("⚠️ Bağlantı hatası, lütfen tekrar dene patron!")
 
-    if player_pool and can_spin:
-        if st.button("🎰 RULETİ ÇEVİR (130-200 PA)", key="rulet_spin_v200", use_container_width=True):
-            # Hakkı düş (Standart ise)
-            if not user_is_vip:
-                new_hak = hak + 1
-                supabase.table("users").update({"rulet_hak": new_hak}).eq("username", curr_user).execute()
-
+    if player_pool:
+        btn_label = "🎰 ALTIN RULETİ ÇEVİR" if user_is_vip else "🎰 STANDART RULETİ ÇEVİR"
+        if st.button(btn_label, key="rulet_spin_btn_v196", use_container_width=True):
             winner = random.choice(player_pool)
             strip_players = [random.choice(player_pool) for _ in range(30)]
             strip_players[25] = winner
+            
             st.session_state.rulet_winner = winner
             st.session_state.animasyon_tamam = False
             
             players_json = json.dumps(strip_players)
+            
             roulette_html = f"""
-            <div style="position:relative; width:100%; height:160px; background:#0d1117; border:3px solid #ef4444; border-radius:15px; overflow:hidden; display:flex; justify-content:center; align-items:center;">
-                <div style="position:absolute; width:100%; height:60px; border-top:2px solid #ef4444; border-bottom:2px solid #ef4444; background:rgba(239, 68, 68, 0.05); z-index:10;"></div>
+            <div style="position:relative; width:100%; height:160px; background:#0d1117; border:3px solid {slot_border}; border-radius:15px; overflow:hidden; display:flex; justify-content:center; align-items:center;">
+                <div style="position:absolute; width:100%; height:60px; border-top:2px solid {slot_border}; border-bottom:2px solid {slot_border}; background:rgba(242, 204, 96, 0.05); z-index:10;"></div>
                 <div id="slot-track" style="display:flex; flex-direction:column; position:absolute; top:0; transition: top 4s cubic-bezier(0.1, 0, 0.1, 1); width:100%;"></div>
             </div>
             <script>
@@ -305,7 +357,7 @@ with tabs[1]:
                     const players = {players_json};
                     const track = document.getElementById('slot-track');
                     const itemH = 60; const contH = 160; const winI = 25;
-                    track.innerHTML = players.map(p => `<div style="height:${{itemH}}px; width:100%; display:flex; flex-direction:column; justify-content:center; align-items:center;"><small style="color:#8b949e; font-size:10px;">${{p.kulup}}</small><b style="color:white; font-size:13px;">${{p.oyuncu_adi}}</b></div>`).join('');
+                    track.innerHTML = players.map(p => `<div style="height:${{itemH}}px; width:100%; display:flex; flex-direction:column; justify-content:center; align-items:center;"><small style="color:#8b949e; font-size:10px;">${{p.kulup || 'Scout Agent'}}</small><b style="color:white; font-size:13px;">${{p.oyuncu_adi}}</b></div>`).join('');
                     setTimeout(() => {{ track.style.top = "-" + ((winI * itemH) - (contH / 2 - itemH / 2)) + "px"; }}, 100);
                 }})();
             </script>
@@ -315,28 +367,44 @@ with tabs[1]:
             st.session_state.animasyon_tamam = True
             st.rerun()
 
-    # --- KAZANAN KARTI ---
-    if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
-        p = st.session_state.rulet_winner
-        tm_url = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p['oyuncu_adi'])}"
-        st.markdown(f"""
-        <div style="background: #111; border: 2px solid #ef4444; border-radius: 20px; padding: 25px; margin-top:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <div style="float:right; text-align:right;"><span style="color:#fff; font-weight:bold; font-size:20px;">PA: {p['pa']}</span></div>
-            <h3 style="margin:0; color:#fff;">{p['oyuncu_adi']}</h3>
-            <hr style="border-top:1px solid #333; margin:15px 0;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; color:#ccc; font-size:14px;">
-                <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
-                <div>🏟️ <b>Kulüp:</b> {p.get('kulup','-')}</div>
-                <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
-                <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
-                <div style="grid-column: span 2; color:#00ff41; font-weight:bold;">💰 Değer: {p.get('deger','-')}</div>
+        # --- OYUNCU KARTI ---
+        if st.session_state.rulet_winner and st.session_state.animasyon_tamam:
+            p = st.session_state.rulet_winner
+            f_check = supabase.table("favoriler").select("oyuncu_adi").eq("oyuncu_adi", p['oyuncu_adi']).eq("kullanici_adi", curr_user).execute()
+            is_fav = len(f_check.data) > 0
+            tm_url = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(p['oyuncu_adi'])}"
+            card_color = "#22c55e" if is_fav else ("#f2cc60" if user_is_vip else "#ef4444")
+            
+            st.markdown(f"""
+            <div style="background: #111; border: 2px solid {card_color}; border-radius: 20px; padding: 25px; margin-top:20px; position:relative; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <div style="position:absolute; top:15px; right:15px; text-align:right;">
+                    <span style="background:{card_color}; color:#000; padding:2px 8px; border-radius:5px; font-weight:bold; font-size:12px;">{"⭐ FAVORİNDE" if is_fav else "🎰 RULET SONUCU"}</span><br>
+                    <span style="color:#fff; font-weight:bold; font-size:18px; display:block; margin-top:5px;">PA: {p['pa']}</span>
+                </div>
+                <h3 style="margin:0; font-size:22px; color:#fff;">{p['oyuncu_adi']}</h3>
+                <hr style="border-top:1px solid #333; margin:15px 0;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; color:#ccc; font-size:14px;">
+                    <div>🌍 <b>Ülke:</b> {p.get('ulke','-')}</div>
+                    <div>🏟️ <b>Kulüp:</b> {p.get('kulup','Serbest')}</div>
+                    <div>👟 <b>Mevki:</b> {p.get('mevki','-')}</div>
+                    <div>🎂 <b>Yaş:</b> {p.get('yas','-')}</div>
+                    <div style="grid-column: span 2; color:#00ff41; font-weight:bold; font-size:16px; margin-top:5px;">💰 Değer: {p.get('deger','-')}</div>
+                </div>
+                <div style="margin-top:20px;">
+                    <a href="{tm_url}" target="_blank" style="text-decoration:none; color:#58a6ff; font-weight:bold; font-size:13px;">Transfermarkt Profili ➔</a>
+                </div>
             </div>
-            <div style="margin-top:20px;"><a href="{tm_url}" target="_blank" style="text-decoration:none; color:#58a6ff; font-weight:bold;">Transfermarkt Profili ➔</a></div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("⭐ FAVORİLERE EKLE", use_container_width=True):
-            supabase.table("favoriler").insert({"oyuncu_adi": p['oyuncu_adi'], "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
-            st.toast("Mermi listeye eklendi!")
+            """, unsafe_allow_html=True)
+
+            if not is_fav:
+                if st.button("⭐ FAVORİLERİME EKLE", key=f"fav_btn_rulet_{p['oyuncu_adi']}", use_container_width=True):
+                    supabase.table("favoriler").insert({"oyuncu_adi": p['oyuncu_adi'], "kulup": p.get('kulup','Serbest'), "pa": p['pa'], "mevki": p['mevki'], "kullanici_adi": curr_user}).execute()
+                    st.toast("Mermi listeye eklendi!")
+                    st.rerun()
+            else:
+                st.info("✅ Bu oyuncu zaten favori listende patron.")
+    else:
+        st.warning("⚠️ Kriterlere uygun ucuz wonderkid bulunamadı. Tekrar dene!")
 
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
@@ -496,7 +564,7 @@ with tabs[3]:
     else:
         st.info("Henüz favori mermin yok. Rulet kısmından avlanmaya başla! 🕵️‍♂️")
         
-# --- 5. GİZLİ YETENEK AVI (V550 - NET İSTİHBARAT MODU) ---
+# --- 5. GİZLİ YETENEK AVI (V540 - KESKİN KURALLAR & NET BÖLGELER) ---
 with tabs[4]:
     import unicodedata
     import time
@@ -504,12 +572,13 @@ with tabs[4]:
     st.markdown('<h2 style="text-align:center; color:#f2cc60;">🕵️ GİZLİ YETENEK AVI</h2>', unsafe_allow_html=True)
     
     # --- OYUN KURALLARI ---
-    with st.expander("📖 Operasyon Talimatı", expanded=True):
+    with st.expander("📖 Oyun Kuralları & Analiz Notları", expanded=True):
         st.markdown("""
-        1. **Net Veri:** Mevki karmaşası bitti. Kimlik tespiti için Ülke, Kulüp ve Yaş verilerini kullan.
-        2. **Sızan Bilgiler:** PA (Potansiyel) son 15 saniyede, CA (Yetenek) son 20 saniyede sistemden sızar.
-        3. **Hızlı Teşhis:** İsmi yazmaya başla, alttaki listeden hedefi işaretle.
-        4. **Puan:** Her doğru teşhis scout rütbeni yükseltir!
+        1. **Bölgesel Analiz:** Mevki karmaşasını bitirdik. Oyuncular 4 ana bölgede (Hücum, Orta Saha, Savunma, Kaleci) analiz edilir.
+        2. **Bonservis Kuralı:** Oyuncu kiralıksa, kiralık gittiği yer değil **asıl ait olduğu kulüp** görünür.
+        3. **İpucu Akışı:** Son 10s PA (Potansiyel), son 5s CA (Yetenek) verileri sistemden şak diye açılır.
+        4. **Akıllı Tespit:** Harf yazdığın an elit adaylar aşağıya dizilir. Seçtiğin an sistem kutuyu temizler ve teşhisi koyar.
+        5. **⚠️ Önemli:** Sistem yapay zeka destekli olduğu için nadiren veri sapmaları olabilir; gerçek bir scout her zaman tetiktedir!
         """)
 
     # --- YARDIMCI FONKSİYONLAR ---
@@ -519,6 +588,22 @@ with tabs[4]:
         nfkd_form = unicodedata.normalize('NFKD', metin)
         return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
+    def bolgesel_mevki_yap(m):
+        m = str(m).upper()
+        # 1. KALECİ
+        if "GK" in m: return "🧤 KALECİ"
+        
+        # 2. HÜCUM BÖLGESİ (Forvetler ve Kanatlar)
+        if any(x in m for x in ["ST", "CF", "AM R", "AM L", "MR", "ML", "LW", "RW"]): 
+            return "🔥 HÜCUM BÖLGESİ"
+        
+        # 3. SAVUNMA BÖLGESİ (Stoperler, Bekler ve Liberolar)
+        if any(x in m for x in ["D C", "DC", "D R", "DR", "D L", "DL", "SW", "WBR", "WBL"]): 
+            return "🛡️ SAVUNMA BÖLGESİ"
+        
+        # 4. ORTA SAHA BÖLGESİ (Diğer tüm orta saha türevleri)
+        return "🧠 ORTA SAHA BÖLGESİ"
+
     # --- DURUM YÖNETİMİ ---
     if 'game_active' not in st.session_state: st.session_state.game_active = False
     if 'target_p' not in st.session_state: st.session_state.target_p = None
@@ -527,9 +612,8 @@ with tabs[4]:
 
     def yeni_av_tetikle():
         st.session_state.last_result = None
-        st.session_state.input_key += 1
-        # Elit havuzdan oyuncu seç (PA 160+)
-        res_g = supabase.table("oyuncular").select("*").not_.eq("kulup", "None").gte("pa", 160).execute()
+        st.session_state.input_key += 1 # Kutuyu sıfırlamak için anahtarı değiştir
+        res_g = supabase.table("oyuncular").select("*").not_.eq("kulup", "None").gte("pa", 165).execute()
         if res_g.data:
             st.session_state.all_player_names = sorted(list(set([r['oyuncu_adi'] for r in res_g.data])))
             st.session_state.target_p = random.choice(res_g.data)
@@ -538,7 +622,7 @@ with tabs[4]:
 
     # --- BAŞLATMA ---
     if not st.session_state.game_active and st.session_state.last_result is None:
-        if st.button("🚀 OPERASYONU BAŞLAT", use_container_width=True):
+        if st.button("🚀 ANALİZİ BAŞLAT", use_container_width=True):
             yeni_av_tetikle()
             st.rerun()
 
@@ -549,40 +633,34 @@ with tabs[4]:
         yuzde = (kalan / 30) * 100
         
         if kalan > 0:
-            # --- ZAMANA BAĞLI İPUÇLARI ---
-            # CA Son 20 saniye kala açılır
-            ca_hint = f"📊 CA: {p.get('ca','?')}" if kalan <= 20 else "📊 CA: 🔒 Kilitli"
-            # PA Son 15 saniye kala açılır
-            pa_hint = f"🔥 PA: {p['pa']}" if kalan <= 15 else "🔥 PA: 🔒 Kilitli"
+            pa_hint = f"🔥 PA: {p['pa']}" if kalan <= 10 else "🔥 PA: ??"
+            ca_hint = f"📊 CA: {p.get('ca','?')}" if kalan <= 5 else "📊 CA: ??"
             
             st.markdown(f"""
-                <div style="background:#161b22; padding:25px; border-radius:20px; border:2px solid #f2cc60; text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                    <h3 style="color:#8b949e; margin-bottom:10px;">HEDEF ANALİZİ</h3>
-                    <div style="width:100%; background:#333; height:8px; border-radius:10px; margin-bottom:20px;">
-                        <div style="width:{yuzde}%; background:#ef4444; height:100%; border-radius:10px; transition: width 0.5s;"></div>
+                <div style="background:#161b22; padding:20px; border-radius:15px; border:2px solid #30363d; text-align:center;">
+                    <h2 style="color:#f2cc60; margin:0;">{bolgesel_mevki_yap(p['mevki'])}</h2>
+                    <div style="width:100%; background:#333; height:10px; border-radius:10px; margin:10px 0;">
+                        <div style="width:{yuzde}%; background:#3b82f6; height:100%; border-radius:10px;"></div>
                     </div>
-                    <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:20px;">
-                        <div style="font-size:22px; color:#fff;">🌍 <b>Uyruk:</b> {p.get('ulke','Bilinmiyor')}</div>
-                        <div style="font-size:22px; color:#fff;">🏟️ <b>Kulüp:</b> {p.get('kulup','Serbest')}</div>
-                        <div style="font-size:22px; color:#fff;">🎂 <b>Yaş:</b> {p['yas']}</div>
-                    </div>
-                    <div style="display:flex; justify-content:center; gap:30px; font-weight:bold; font-size:18px; border-top:1px solid #30363d; pt:15px;">
-                        <span style="color:#58a6ff;">{ca_hint}</span>
+                    <p style="font-size:20px;">🎂 <b>{p['yas']} Yaş</b> | 🏟️ <b>{p['kulup']}</b></p>
+                    <div style="display:flex; justify-content:center; gap:20px; font-weight:bold; font-size:17px;">
                         <span style="color:#f2cc60;">{pa_hint}</span>
+                        <span style="color:#58a6ff;">{ca_hint}</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 
             st.write("")
-            query = st.text_input("Hedef ismini buraya yaz...", key=f"input_{st.session_state.input_key}").strip()
+            query = st.text_input("Hedef ismini yazmaya başla...", key=f"input_{st.session_state.input_key}").strip()
             
             if query:
                 matches = [name for name in st.session_state.all_player_names if metin_temizle(query) in metin_temizle(name)][:5]
+                
                 if matches:
-                    st.write("🎯 **Eşleşen Adaylar:**")
+                    st.write("🎯 **Potansiyel Hedefler (Analiz Et):**")
                     for match in matches:
                         if st.button(f"📍 {match}", key=f"btn_{match}", use_container_width=True):
-                            st.session_state.input_key += 1
+                            st.session_state.input_key += 1 # Kutuyu sıfırla
                             if metin_temizle(match) == metin_temizle(p['oyuncu_adi']):
                                 st.session_state.last_result = "WIN"
                                 st.session_state.game_active = False
@@ -602,28 +680,27 @@ with tabs[4]:
             st.session_state.game_active = False
             st.rerun()
 
-    # --- SONUÇ EKRANI ---
+    # --- SONUÇ VE GERİ SAYIM ---
     if st.session_state.last_result:
         p = st.session_state.target_p
         if st.session_state.last_result == "WIN":
             st.balloons()
-            st.success(f"🎯 TEBRİKLER SCOUT! Hedef başarıyla tespit edildi: {p['oyuncu_adi']}")
+            st.success(f"🎯 HEDEF TESPİT EDİLDİ: {p['oyuncu_adi']}")
         else:
-            st.error(f"⌛ ZAMAN DOLDU! İstihbarat yetersiz kaldı. Aranan Hedef: {p['oyuncu_adi']}")
+            st.error(f"⌛ VERİ ANALİZİ BAŞARISIZ! Aranan Hedef: {p['oyuncu_adi']}")
 
-        if st.button("🚫 OPERASYONU DURDUR"):
+        if st.button("🚫 Durdur / Vazgeç"):
             st.session_state.last_result = None
             st.session_state.input_key += 1
             st.rerun()
 
         placeholder = st.empty()
         for i in range(5, 0, -1):
-            placeholder.info(f"🔄 {i} saniye içinde yeni hedef için veriler toplanıyor...")
+            placeholder.info(f"🔄 {i} saniye içinde yeni hedef belirlenecek...")
             time.sleep(1)
         
         yeni_av_tetikle()
         st.rerun()
-
 
 
 
