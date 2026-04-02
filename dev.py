@@ -358,6 +358,7 @@ with tabs[1]:
             }).execute()
             st.toast("Mermi kulübe katıldı!")
 
+            
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
 with tabs[2]:
     st.markdown('<h2 style="text-align:center;">🏟️ ELITE ARENA - TAKTİK TAHTASI</h2>', unsafe_allow_html=True)
