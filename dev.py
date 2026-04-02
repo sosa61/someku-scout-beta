@@ -229,11 +229,11 @@ with tabs[0]:
         if c1.button("⬅️ Geri", use_container_width=True) and st.session_state.page > 0: st.session_state.page -= 1; st.rerun()
         with c2: st.markdown(f"<p style='text-align:center;'>Sayfa: {st.session_state.page + 1}</p>", unsafe_allow_html=True)
         if c3.button("İleri ➡️", use_container_width=True): st.session_state.page += 1; st.rerun()
-# --- 2. RULET (V2000 - 3D UCL ENGINE & RE-SPIN) ---
+# --- 2. RULET (V2000 - 3D UCL ENGINE & AUTO RE-SPIN) ---
 with tabs[1]:
     import random, time, urllib.parse
 
-    # 1. 3D UCL THEME CSS (Derinlik, Döndürme ve Işık Efektleri)
+    # 1. 3D UCL THEME CSS
     st.markdown("""
         <style>
         @keyframes packL { 0% { left: 0; } 100% { left: -100%; opacity: 0; } }
@@ -271,7 +271,7 @@ with tabs[1]:
             color: #050814; margin: 0 auto 15px; display: flex; align-items: center;
             justify-content: center; font-size: 42px; font-weight: 900;
             border: 4px solid #fff; box-shadow: 0 0 30px rgba(255,255,255,0.4);
-            transform: translateZ(30px); /* 3D Derinlik */
+            transform: translateZ(30px);
         }
         
         .p-name { color: #fff; font-size: 26px; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
@@ -298,7 +298,7 @@ with tabs[1]:
     st.markdown('<h2 style="text-align:center; color:#ffffff; letter-spacing:4px; text-shadow: 0 0 20px #3c5999;">★ CHAMPIONS ARENA ★</h2>', unsafe_allow_html=True)
 
     curr_user = st.session_state.get('user')
-    mevki_tr = {
+    mevki_tr_map = {
         "GK": "Kaleci", "DC": "Stoper", "DL": "Sol Bek", "DR": "Sağ Bek", 
         "WBL": "Sol Kanat Bek", "WBR": "Sağ Kanat Bek", "DM": "Ön Libero",
         "MC": "Orta Saha", "ML": "Sol Kanat", "MR": "Sağ Kanat",
@@ -319,7 +319,7 @@ with tabs[1]:
         pool = [p for p in res.data if filter_engine(p)]
     except: pool = []
 
-    # 🎰 İLK TETİKLEYİCİ
+    # 🎰 TETİKLEYİCİ MANTIĞI
     if not st.session_state.get('rulet_winner'):
         if pool:
             if st.button("🏆 CHAMPIONS PACK AÇ", key="v20_main_btn", use_container_width=True):
@@ -330,7 +330,7 @@ with tabs[1]:
                 st.session_state.animasyon_tamam = True
                 st.rerun()
     
-    # 🏆 GÖSTERİM & TEKRAR ÇEVİRME
+    # 🏆 GÖSTERİM & OTOMATİK TEKRAR
     if st.session_state.get('rulet_winner') and st.session_state.get('animasyon_tamam'):
         p = st.session_state.rulet_winner
         name = str(p.get('oyuncu_adi', '-')).upper()
@@ -340,7 +340,8 @@ with tabs[1]:
         raw_pos = str(p.get('mevki', '-'))
         age = str(p.get('yas', '-'))
         val = str(p.get('deger', '-'))
-        pos_tr = mevki_tr.get(raw_pos, raw_pos)
+        
+        pos_tr = mevki_tr_map.get(raw_pos, raw_pos) # Türkçe Mevki
         star_count = 5 if pa >= 180 else (4 if pa >= 165 else (3 if pa >= 150 else 2))
         stars = "★" * star_count
         tm_link = f"https://www.transfermarkt.com.tr/schnellsuche/ergebnis/schnellsuche?query={urllib.parse.quote(name)}"
@@ -376,8 +377,9 @@ with tabs[1]:
                 st.toast("Mermi kulübe katıldı!")
         with col2:
             if st.button("🔄 YENİ PAKET AÇ", key="v20_retry", use_container_width=True):
-                st.session_state.rulet_winner = None # ESKİ KAZANANI SİL
-                st.session_state.animasyon_tamam = False
+                # ESKİ KAZANANI SİL VE YENİSİNİ ANINDA ÇEK (OTOMATİK BAŞLATIR)
+                st.session_state.rulet_winner = random.choice(pool)
+                st.session_state.animasyon_tamam = True
                 st.rerun()
             
 # --- 3. İLK 11 (V185 - CENTRAL SEARCH & TR POS) ---
